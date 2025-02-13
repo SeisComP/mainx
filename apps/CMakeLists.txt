@@ -1,0 +1,5 @@
+SUBDIRS(python)
+
+IF(SC_GLOBAL_GUI)
+	SUBDIRS(gui-qt)
+ENDIF()

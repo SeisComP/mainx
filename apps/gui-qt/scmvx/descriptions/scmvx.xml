@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<seiscomp>
+	<module name="scmvx" category="GUI">
+		<description>Map view	</description>
+		<configuration>
+			<parameter name="displaymode" type="string" values="groundmotion,qualitycontrol">
+				<description>
+				Set one of the available display modes used during startup:
+				groundmotion or qualitycontrol.
+				</description>
+			</parameter>
+			<parameter name="readEventsNotOlderThan" type="double" default="86400" unit="s">
+				<description>
+				Sets the time span in seconds before current time to read events
+				initially from database.
+				</description>
+			</parameter>
+			<parameter name="centerOrigins" type="boolean" default="false">
+				<description>
+				If a new origin/event is set/selected, this option defines if the map is centered
+				or not at the origin location.
+				</description>
+			</parameter>
+			<parameter name="annotations" type="boolean" default="false">
+				<description>
+				Enables/disabled drawing of station annotations at startup.
+				</description>
+			</parameter>
+			<parameter name="annotationsWithChannels" type="boolean" default="true">
+				<description>
+				Enables/disabled drawing of station annotations with location/channel codes.
+				</description>
+			</parameter>
+			<parameter name="mapLegendPosition" type="string" default="topleft" values="topleft,topright,bottomright,bottomleft">
+				<description>
+				Sets the location of the map symbol legend (QC, ground motion).
+				</description>
+			</parameter>
+			<parameter name="eventLegendPosition" type="string" default="bottomleft" values="topleft,topright,bottomright,bottomleft">
+				<description>
+				Sets the location of the event symbol legend.
+				</description>
+			</parameter>
+			<group name="stations">
+				<parameter name="amplitudeTimeSpan" type="double" default="10" unit="s">
+					<description></description>
+				</parameter>
+				<parameter name="groundMotionRecordLifeSpan" type="double" default="600" unit="s">
+					<description>
+					Time to keep waveform data in memory
+					</description>
+				</parameter>
+				<parameter name="triggerTimeout" type="double" default="60" unit="s">
+					<description></description>
+				</parameter>
+				<parameter name="groundMotionFilter" type="string" default="ITAPER(60)>>BW_HP(4,0.5)">
+					<description>
+					Sets the filter applied to determine ground motion.
+					</description>
+				</parameter>
+			</group>
+			<group name="display">
+				<description>
+					Allows to define an initial rectangular region for the map.
+				</description>
+				<parameter name="latmin" type="double" default="0" unit="deg">
+					<description>Minimum latitude in degrees.</description>
+				</parameter>
+				<parameter name="lonmin" type="double" default="0" unit="deg">
+					<description>Minimum longitude in degrees.</description>
+				</parameter>
+				<parameter name="latmax" type="double" default="0" unit="deg">
+					<description>Maximum latitude in degrees.</description>
+				</parameter>
+				<parameter name="lonmax" type="double" default="0" unit="deg">
+					<description>Maximum longitude in degrees.</description>
+				</parameter>
+			</group>
+		</configuration>
+	</module>
+</seiscomp>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<seiscomp>
+	<module name="scmsdemux" category="Utilities" standalone="true">
+		<description>Demultiplex miniSEED record creating files per stream</description>
+		<command-line>
+			<synopsis>
+				scmsdemux [OPTION] source
+			</synopsis>
+			<group name="Verbosity">
+				<option flag="h" long-flag="help">
+					<description>
+					Display this help message.
+					</description>
+				</option>
+				<option flag="v" long-flag="verbose">
+					<description>
+					Verbose mode.
+					</description>
+				</option>
+			</group>
+		</command-line>
+	</module>
+</seiscomp>

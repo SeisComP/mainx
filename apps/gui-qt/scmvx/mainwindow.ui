@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>888</width>
+    <height>790</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Seismic Engineering Parameters</string>
+  </property>
+  <property name="iconSize">
+   <size>
+    <width>16</width>
+    <height>16</height>
+   </size>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout">
+    <property name="spacing">
+     <number>6</number>
+    </property>
+    <property name="margin">
+     <number>9</number>
+    </property>
+    <item>
+     <widget class="QTabWidget" name="tabWidget">
+      <widget class="QWidget" name="tabNetwork">
+       <attribute name="title">
+        <string>Network</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="tabGM">
+       <attribute name="title">
+        <string>Ground motion</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="tabQC">
+       <attribute name="title">
+        <string>Quality control</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="tabEvents">
+       <attribute name="title">
+        <string>Events</string>
+       </attribute>
+      </widget>
+     </widget>
+    </item>
+    <item>
+     <widget class="QFrame" name="frameHeader">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::NoFrame</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QVBoxLayout">
+       <property name="spacing">
+        <number>6</number>
+       </property>
+       <property name="margin">
+        <number>0</number>
+       </property>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>888</width>
+     <height>38</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>&amp;File</string>
+    </property>
+    <addaction name="actionOpenFile"/>
+    <addaction name="actionSearchStation"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>&amp;View</string>
+    </property>
+    <widget class="QMenu" name="menuQC">
+     <property name="title">
+      <string>QC</string>
+     </property>
+    </widget>
+    <addaction name="actionShowGrayscale"/>
+	<addaction name="actionShowLatestEvent"/>
+    <addaction name="actionShowMapLegend"/>
+    <addaction name="actionShowStationIssues"/>
+    <addaction name="actionShowStationAnnotations"/>
+    <addaction name="actionOpenEventTable"/>
+    <addaction name="actionShowChannelCodes"/>
+    <addaction name="actionCenterMapOnEventUpdate"/>
+    <addaction name="separator"/>
+    <addaction name="menuQC"/>
+    <addaction name="separator"/>
+    <addaction name="actionResetView"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuView"/>
+  </widget>
+  <action name="actionQuit">
+   <property name="text">
+    <string>&amp;Quit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionPreferences">
+   <property name="text">
+    <string>&amp;Preferences</string>
+   </property>
+  </action>
+  <action name="actionShowGrayscale">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Show map base layer in grayscale</string>
+   </property>
+   <property name="shortcut">
+    <string>G</string>
+   </property>
+  </action>
+  <action name="actionShowLatestEvent">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show latest event information on map</string>
+   </property>
+   <property name="shortcut">
+    <string>F6</string>
+   </property>
+  </action>
+  <action name="actionShowMapLegend">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show map legend</string>
+   </property>
+   <property name="shortcut">
+    <string>F7</string>
+   </property>
+  </action>
+  <action name="actionShowStationAnnotations">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show station annotations</string>
+   </property>
+   <property name="shortcut">
+    <string>F9</string>
+   </property>
+  </action>
+  <action name="actionShowStationIssues">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show station issues</string>
+   </property>
+   <property name="shortcut">
+    <string>F8</string>
+   </property>
+  </action>
+  <action name="actionQCDelay">
+   <property name="text">
+    <string>Delay</string>
+   </property>
+   <property name="toolTip">
+    <string>Show QC 'delay' parameter</string>
+   </property>
+   <property name="whatsThis">
+    <string>delay</string>
+   </property>
+  </action>
+  <action name="actionQCLatency">
+   <property name="text">
+    <string>Latency</string>
+   </property>
+   <property name="toolTip">
+    <string>Show QC 'latency' parameter</string>
+   </property>
+   <property name="statusTip">
+    <string/>
+   </property>
+   <property name="whatsThis">
+    <string>latency</string>
+   </property>
+  </action>
+  <action name="actionQCTimingQuality">
+   <property name="text">
+    <string>Timing Quality</string>
+   </property>
+   <property name="toolTip">
+    <string>Show QC timing quality' parameter</string>
+   </property>
+   <property name="whatsThis">
+    <string>timing quality</string>
+   </property>
+  </action>
+  <action name="actionQCGapsInterval">
+   <property name="text">
+    <string>Gaps Interval</string>
+   </property>
+   <property name="toolTip">
+    <string>Show QC 'gaps interval' parameter</string>
+   </property>
+   <property name="whatsThis">
+    <string>gaps interval</string>
+   </property>
+  </action>
+  <action name="actionQCGapsLength">
+   <property name="text">
+    <string>Gaps Length</string>
+   </property>
+  </action>
+  <action name="actionQCOverlapInterval">
+   <property name="text">
+    <string>Overlap Interval</string>
+   </property>
+  </action>
+  <action name="actionQCAvailability">
+   <property name="text">
+    <string>Availability</string>
+   </property>
+  </action>
+  <action name="actionQCOffset">
+   <property name="text">
+    <string>Offset</string>
+   </property>
+  </action>
+  <action name="actionQCRMS">
+   <property name="text">
+    <string>RMS</string>
+   </property>
+  </action>
+  <action name="actionShowChannelCodes">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show channel codes</string>
+   </property>
+   <property name="iconText">
+    <string>Show channel codes</string>
+   </property>
+   <property name="toolTip">
+    <string>Whether to show the full ID of the preferred channel of a station or just the station id in the annotation.</string>
+   </property>
+  </action>
+  <action name="actionOpenEventTable">
+   <property name="text">
+    <string>Switch to event table</string>
+   </property>
+   <property name="shortcut">
+    <string>F10</string>
+   </property>
+  </action>
+  <action name="actionSearchStation">
+   <property name="text">
+    <string>Search station</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
+   </property>
+  </action>
+  <action name="actionCenterMapOnEventUpdate">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Center map on event update</string>
+   </property>
+   <property name="shortcut">
+    <string>C</string>
+   </property>
+  </action>
+  <action name="actionResetView">
+   <property name="text">
+    <string>Reset view</string>
+   </property>
+   <property name="shortcut">
+    <string>N</string>
+   </property>
+  </action>
+  <action name="actionOpenFile">
+   <property name="text">
+    <string>&amp;Open file</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+ </widget>
+ <resources>
+  <include location="../../../../base/common/libs/seiscomp/gui/datamodel/icons.qrc"/>
+  <include location="resources.qrc"/>
+ </resources>
+ <connections/>
+</ui>

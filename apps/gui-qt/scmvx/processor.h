@@ -82,8 +82,8 @@ class GroundMotionProcessor : public Processing::WaveformProcessor {
 		RingBuffer *_velocityData{nullptr}; //!< Data converted to velocity
 		RingBuffer *_processedData{nullptr}; //!< Velocity converted to max amplitudes
 
-		Core::SmartPointer<Filter>::Impl _velocityFilter;
-		Core::SmartPointer<Filter>::Impl _maxAmpFilter;
+		Core::SmartPointer<Filter> _velocityFilter;
+		Core::SmartPointer<Filter> _maxAmpFilter;
 };
 
 

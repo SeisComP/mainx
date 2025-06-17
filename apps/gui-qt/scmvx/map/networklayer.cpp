@@ -828,9 +828,8 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 		s->drawShadow(p);
 	}
 
-	QFont fa = Gui::FontAwesome6::font();
+	QFont fa = Gui::FontAwesome6::fontSolid();
 	fa.setPointSize(p.font().pointSize());
-	p.setFont(fa);
 
 	for ( int i = Gui::Map::Symbol::NONE; i <= Gui::Map::Symbol::HIGH; ++i ) {
 		foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
@@ -839,6 +838,7 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 			s->draw(canvas, p);
 
 			if ( _showIssues && (s->state() != Settings::OK) ) {
+				p.setFont(fa);
 				int em = qMax(p.fontMetrics().height() - 4, 0) * 0.707106781186;
 				QPoint center = s->pos() + QPoint(s->width() + em, -em - s->width() * 3 / 2);
 

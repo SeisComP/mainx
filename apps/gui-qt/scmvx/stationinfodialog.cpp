@@ -158,9 +158,15 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 				_ui.labelIssueText->setText(tr("The parameter 'detecStream' is not configured by global bindings."));
 				break;
 
-			case Settings::NoMetaData:
+			case Settings::NoChannelGroupMetaData:
 				icon = Gui::FontAwesome6::icon(Gui::FontAwesome6::chDatabase, QColor(Qt::darkRed));
-				_ui.labelIssueText->setText(tr("The configured bindings channel %1%2 is not part of the stations meta data.")
+				_ui.labelIssueText->setText(tr("The configured bindings channel %1%2 is not part of the stations metadata.")
+				                            .arg(stationData->detecLocid.c_str(), stationData->detecStream.c_str()));
+				break;
+
+			case Settings::NoVerticalCHannelMetaData:
+				icon = Gui::FontAwesome6::icon(Gui::FontAwesome6::chDatabase, QColor(Qt::darkRed));
+				_ui.labelIssueText->setText(tr("The configured bindings channel group %1%2 has no defined vertical channel in the stations metadata.")
 				                            .arg(stationData->detecLocid.c_str(), stationData->detecStream.c_str()));
 				break;
 

@@ -855,7 +855,8 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 						drawWarningSymbol(p, center, Gui::FontAwesome6::chUnlink);
 						break;
 
-					case Settings::NoMetaData:
+					case Settings::NoChannelGroupMetaData:
+					case Settings::NoVerticalCHannelMetaData:
 						drawWarningSymbol(p, center, Gui::FontAwesome6::chDatabase);
 						break;
 

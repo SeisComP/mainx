@@ -185,14 +185,22 @@ bool Application::init() {
 
 			keys->getString(data->detecLocid, "detecLocid");
 
+			bool foundVerticalChannel = true;
+
 			for ( size_t l = 0; l < sta->sensorLocationCount(); ++l ) {
 				DataModel::SensorLocation* loc = sta->sensorLocation(l);
-				if ( loc->code() != data->detecLocid ) continue;
+				if ( loc->code() != data->detecLocid ) {
+					continue;
+				}
 
-				if ( refTime < loc->start() ) continue;
+				if ( refTime < loc->start() ) {
+					continue;
+				}
 
 				try {
-					if ( loc->end() <= refTime ) continue;
+					if ( loc->end() <= refTime ) {
+						continue;
+					}
 				}
 				catch (...) {}
 
@@ -205,19 +213,26 @@ bool Application::init() {
 						SEISCOMP_ERROR("Unable to find meta data for vertical channel of %s.%s.%s.%s",
 						               net->code().c_str(), sta->code().c_str(),
 						               loc->code().c_str(), data->detecStream.c_str());
+						foundVerticalChannel = false;
 					}
 				}
 				else {
 					for ( size_t c = 0; c < loc->streamCount(); ++c ) {
 						DataModel::Stream *stream = loc->stream(c);
-						if ( stream->code() != data->detecStream ) continue;
+						if ( stream->code() != data->detecStream ) {
+							continue;
+						}
 
 						try {
-							if ( stream->end() <= refTime ) continue;
+							if ( stream->end() <= refTime ) {
+								continue;
+							}
 						}
 						catch (...) {}
 
-						if ( refTime < stream->start() ) continue;
+						if ( refTime < stream->start() ) {
+							continue;
+						}
 
 						cha = stream;
 						break;
@@ -277,7 +292,7 @@ bool Application::init() {
 				data->state = Settings::Unconfigured;
 			}
 			else if ( !data->channel ) {
-				data->state = Settings::NoMetaData;
+				data->state = !foundVerticalChannel ? Settings::NoVerticalCHannelMetaData : Settings::NoChannelGroupMetaData;
 			}
 		}
 	}

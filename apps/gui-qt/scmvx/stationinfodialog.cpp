@@ -139,33 +139,33 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 
 		switch ( stationData->state ) {
 			case Settings::OK:
-				icon = Gui::FontAwesome6::icon(Gui::FontAwesome6::chCheck, QColor(Qt::darkGreen));
+				icon = Gui::FontAwesome6::iconSolid(Gui::FontAwesome6::chCheck, QColor(Qt::darkGreen));
 				_ui.labelIssueText->setText(tr("No issues detected."));
 				break;
 
 			case Settings::Unknown:
-				icon = Gui::FontAwesome6::icon(Gui::FontAwesome6::chQuestion);
+				icon = Gui::FontAwesome6::iconSolid(Gui::FontAwesome6::chQuestion);
 				_ui.labelIssueText->setText(tr("The station is unknown to the system."));
 				break;
 
 			case Settings::Unconfigured:
-				icon = Gui::FontAwesome6::icon(Gui::FontAwesome6::chWrench, QColor(255,128,0));
+				icon = Gui::FontAwesome6::iconSolid(Gui::FontAwesome6::chWrench, QColor(255,128,0));
 				_ui.labelIssueText->setText(tr("The station does not have global bindings."));
 				break;
 
 			case Settings::NoPrimaryStream:
-				icon = Gui::FontAwesome6::icon(Gui::FontAwesome6::chWrench, QColor(255,128,0));
+				icon = Gui::FontAwesome6::iconSolid(Gui::FontAwesome6::chWrench, QColor(255,128,0));
 				_ui.labelIssueText->setText(tr("The parameter 'detecStream' is not configured by global bindings."));
 				break;
 
 			case Settings::NoChannelGroupMetaData:
-				icon = Gui::FontAwesome6::icon(Gui::FontAwesome6::chDatabase, QColor(Qt::darkRed));
+				icon = Gui::FontAwesome6::iconSolid(Gui::FontAwesome6::chDatabase, QColor(Qt::darkRed));
 				_ui.labelIssueText->setText(tr("The configured bindings channel %1%2 is not part of the stations metadata.")
 				                            .arg(stationData->detecLocid.c_str(), stationData->detecStream.c_str()));
 				break;
 
 			case Settings::NoVerticalCHannelMetaData:
-				icon = Gui::FontAwesome6::icon(Gui::FontAwesome6::chDatabase, QColor(Qt::darkRed));
+				icon = Gui::FontAwesome6::iconSolid(Gui::FontAwesome6::chDatabase, QColor(Qt::darkRed));
 				_ui.labelIssueText->setText(tr("The configured bindings channel group %1%2 has no defined vertical channel in the stations metadata.")
 				                            .arg(stationData->detecLocid.c_str(), stationData->detecStream.c_str()));
 				break;
@@ -174,8 +174,10 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 				break;
 		}
 
-		if ( !icon.isNull() )
+		if ( !icon.isNull() ) {
 			_ui.labelIssueIcon->setPixmap(icon.pixmap(2 * em, 2 * em));
+			_ui.labelIssueIcon->setFixedWidth(2 * em);
+		}
 
 		if ( stationData->proc ) {
 			_trace[0]->setRecordScale(0, stationData->proc->dataScale() * 1E9);

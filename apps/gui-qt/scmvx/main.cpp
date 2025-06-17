@@ -102,9 +102,37 @@ bool Application::validateParameters() {
 
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void Application::printUsage() const {
+	std::cout << "Usage:"  << std::endl << "  " << name() << " [options]"
+	          << std::endl << std::endl
+	          << "Map view showing maps with stations and events. Issues "
+	             "related to configuration of stations are indicated."
+	          << std::endl;
+
+	Seiscomp::Client::Application::printUsage();
+
+	std::cout << "Examples:" << std::endl;
+	std::cout << "Real-time view of events and stations on a local server"
+	          << std::endl
+	          << "  " << name() << " -H localhost -I slink://localhost --debug"
+	          << std::endl << std::endl;
+	std::cout << "Offline view of event parameters given in an XML file. "
+	             "Inventory is read from database."
+	          << std::endl
+	          << "  " << name() << " -d localhost -i events.xml --debug"
+	          << std::endl << std::endl;
+}
+
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool Application::init() {
-	if ( !Gui::Application::init() )
+	if ( !Gui::Application::init() ) {
 		return false;
+	}
 
 	if ( !global.displayMode.empty()
 	   && global.displayMode != "groundmotion"

@@ -39,27 +39,15 @@ Settings global;
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void Settings::accept(System::Application::SettingsLinker &linker) {
 	linker
-	& cli(
-		displayMode,
-		"MapViewX", "displaymode",
-		"Start mapview as walldisplay. Modes: groundmotion, qualitycontrol"
-	)
-	& cliSwitch(
-		showLegend,
-		"MapViewX", "with-legend",
-		"Shows the map legend if started as walldisplay"
-	)
-	& cliSwitch(
-		offline,
-		"MapViewX", "offline",
-		"Do not connect to a messaging server and do not subscribe channel data"
-	)
-	& cli(
-		inputFile,
-		"MapViewX", "input-file,i",
-		"Load events in given XML file during startup and "
-		"switch to offline mode."
-	)
+	& cli(displayMode, "MapViewX", "displaymode",
+	      "Start mapview with given mode. Modes: groundmotion, qualitycontrol.")
+	& cli(inputFile, "MapViewX", "input-file,i",
+	      "Load events in given XML file during startup and switch to offline "
+	      "mode implying --offline.")
+	& cliSwitch(offline, "MapViewX", "offline",
+	            "Start in offline mode without connection to a messaging and "
+	            "subscribtion to channel data.")
+	& cliSwitch(showLegend, "MapViewX", "with-legend", "Shows map legends.")
 	& cfg(filter, "stations.groundMotionFilter")
 	& cfg(maximumAmplitudeTimeSpan, "stations.amplitudeTimeSpan")
 	& cfg(ringBuffer, "stations.groundMotionRecordLifeSpan")

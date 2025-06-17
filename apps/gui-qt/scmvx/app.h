@@ -50,6 +50,7 @@ class Application : public Gui::Kicker<MainWindow> {
 		bool initPlugins() override;
 		bool validateParameters() override;
 		bool init() override;
+		void printUsage() const override;
 		void setupUi(MainWindow *mw) override {
 			_mainWindow = mw;
 		}

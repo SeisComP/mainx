@@ -26,6 +26,7 @@
 #include <seiscomp/datamodel/inventory.h>
 #include <seiscomp/gui/core/gradient.h>
 #include <seiscomp/gui/datamodel/stationsymbol.h>
+#include <seiscomp/gui/map/annotations.h>
 #include <seiscomp/gui/map/layer.h>
 
 #include <map>
@@ -55,7 +56,9 @@ class NetworkLayerGradient : public Gui::Gradient {
 class NetworkLayerSymbol : public StationSymbol {
 	public:
 		explicit NetworkLayerSymbol(NetworkLayer *layer,
-		                            DataModel::Station *station);
+		                            DataModel::Station *station,
+		                            Gui::Map::AnnotationItem *annotation);
+		virtual ~NetworkLayerSymbol() override;
 
 
 	public:
@@ -76,22 +79,25 @@ class NetworkLayerSymbol : public StationSymbol {
 
 		void updateColor();
 
-		void setAnnotation(const QString &a) { _annotation = a; }
-		const QString &annotation() const { return _annotation; }
+		void setAnnotation(const QString &a) { _annotation->text = a; }
+		const QString &annotation() const { return _annotation->text; }
 
 		void setState(Settings::State state) { _state = state; }
 		Settings::State state() const { return _state; }
 
+		void calculateMapPosition(const Seiscomp::Gui::Map::Canvas *canvas) override;
+		void customDraw(const Seiscomp::Gui::Map::Canvas *canvas, QPainter& painter) override;
+
 
 	private:
-		DataModel::Station    *_model;
-		Settings::StationData *_data;
-		bool                   _selected;
-		double                 _value;
-		QColor                 _color;
-		QString                _annotation;
-		NetworkLayer          *_layer;
-		Settings::State        _state;
+		Seiscomp::Gui::Map::AnnotationItem *_annotation;
+		DataModel::Station                 *_model;
+		Settings::StationData              *_data;
+		bool                                _selected;
+		double                              _value;
+		QColor                              _color;
+		NetworkLayer                       *_layer;
+		Settings::State                     _state;
 
 	friend class NetworkLayer;
 };
@@ -156,10 +162,12 @@ class NetworkLayer : public Gui::Map::Layer {
 		 *        inventory where the epoch is open or valid for a passed
 		 *        reference time.
 		 * @param inv The inventory pointer
+		 * @param annotations Instance to add station annotations to
 		 * @param time The reference time for which the station must be
 		 *             operational
 		 */
 		void setInventory(DataModel::Inventory *inv,
+		                  Gui::Map::Annotations *annotations,
 		                  const Core::Time *time = nullptr);
 
 		/**
@@ -206,14 +214,6 @@ class NetworkLayer : public Gui::Map::Layer {
 	//  Public slots
 	// ----------------------------------------------------------------------
 	public slots:
-		/**
-		 * @brief Sets if station annotations should be shown or not. The
-		 *        default is true.
-		 * @param enable The visibility state
-		 * @param withChannelCode
-		 */
-		void setShowAnnotations(bool enable);
-
 		/**
 		 * @brief Whether to include the preferred channel code. The default
 		 *        is false.
@@ -270,7 +270,6 @@ class NetworkLayer : public Gui::Map::Layer {
 		typedef QVector<NetworkLayerSymbol*> Symbols;
 		typedef std::map<void*, NetworkLayerSymbol*> StationSymbolMap;
 
-		bool                                     _showAnnotations;
 		bool                                     _showChannelCodes;
 		bool                                     _showIssues;
 		ColorMode                                _colorMode;

@@ -191,9 +191,11 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	connect(_eventListView, SIGNAL(visibleEventCountChanged()),
 	        this, SLOT(updateEventTabText()));
 
+	_annotationLayer = new Gui::Map::AnnotationLayer(_mapWidget, new Gui::Map::Annotations);
+	_annotationLayer->setVisible(_ui.actionShowStationAnnotations->isChecked());
+
 	_stationLayer = new NetworkLayer(_mapWidget);
-	_stationLayer->setInventory(Client::Inventory::Instance()->inventory());
-	_stationLayer->setShowAnnotations(_ui.actionShowStationAnnotations->isChecked());
+	_stationLayer->setInventory(Client::Inventory::Instance()->inventory(), _annotationLayer->annotations());
 	_stationLayer->setShowChannelCodes(_ui.actionShowChannelCodes->isChecked());
 	_stationLayer->setShowIssues(_ui.actionShowStationIssues->isChecked());
 
@@ -203,7 +205,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	connect(_stationLayer, SIGNAL(stationClicked(Seiscomp::DataModel::Station*)),
 	        this, SLOT(stationClicked(Seiscomp::DataModel::Station*)));
 
-	connect(_ui.actionShowStationAnnotations, SIGNAL(toggled(bool)), _stationLayer, SLOT(setShowAnnotations(bool)));
+	connect(_ui.actionShowStationAnnotations, SIGNAL(toggled(bool)), _annotationLayer, SLOT(setVisible(bool)));
 	connect(_ui.actionShowChannelCodes, SIGNAL(toggled(bool)), _stationLayer, SLOT(setShowChannelCodes(bool)));
 	connect(_ui.actionShowStationIssues, SIGNAL(toggled(bool)), _stationLayer, SLOT(setShowIssues(bool)));
 	connect(_ui.actionSearchStation, SIGNAL(triggered()), this, SLOT(searchStation()));
@@ -273,6 +275,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	_mapWidget->canvas().addLayer(_stationLayer);
 	_mapWidget->canvas().addLayer(_eventLayer);
 	_mapWidget->canvas().addLayer(_currentEventLayer);
+	_mapWidget->canvas().addLayer(_annotationLayer);
 	_mapWidget->canvas().addLayer(new ScaleLayer);
 
 	_ui.menuFile->insertAction(_ui.actionOpenEventTable, this->_actionShowSettings);

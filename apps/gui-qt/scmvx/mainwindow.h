@@ -30,6 +30,7 @@
 #include <seiscomp/gui/core/mainwindow.h>
 #include <seiscomp/gui/datamodel/eventlistview.h>
 #include <seiscomp/gui/map/mapwidget.h>
+#include <seiscomp/gui/map/layers/annotationlayer.h>
 #endif
 
 #include <QTimer>
@@ -136,6 +137,7 @@ class MainWindow : public Gui::MainWindow {
 		Gui::MapWidget                *_mapWidget;
 		Gui::EventListView            *_eventListView;
 		NetworkLayer                  *_stationLayer;
+		Gui::Map::AnnotationLayer     *_annotationLayer;
 		EventLayer                    *_eventLayer;
 		EventHeatLayer                *_eventHeatLayer;
 		CurrentEventLayer             *_currentEventLayer;

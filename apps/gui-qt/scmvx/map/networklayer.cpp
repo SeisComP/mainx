@@ -86,8 +86,10 @@ NetworkLayerGradient *currentGradient = nullptr;
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 NetworkLayerSymbol::NetworkLayerSymbol(NetworkLayer *layer,
-                                       DataModel::Station *station)
-: _model(station)
+                                       DataModel::Station *station,
+                                       Gui::Map::AnnotationItem *annotation)
+: _annotation(annotation)
+, _model(station)
 , _selected(false)
 , _value(-1)
 , _layer(layer)
@@ -100,6 +102,15 @@ NetworkLayerSymbol::NetworkLayerSymbol(NetworkLayer *layer,
 	if ( it != global.stationConfig.end() ) {
 		_data = it->second.get();
 	}
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+NetworkLayerSymbol::~NetworkLayerSymbol() {
+	delete _annotation;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -166,6 +177,31 @@ void NetworkLayerSymbol::updateColor() {
 	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void NetworkLayerSymbol::calculateMapPosition(const Seiscomp::Gui::Map::Canvas *canvas) {
+	StationSymbol::calculateMapPosition(canvas);
+	if ( _annotation ) {
+		_annotation->visible = !isClipped() && isVisible();
+	}
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void NetworkLayerSymbol::customDraw(const Gui::Map::Canvas *canvas, QPainter &painter) {
+	StationSymbol::customDraw(canvas, painter);
+
+	if ( _annotation ) {
+		_annotation->updateLabelRect(painter, _position - QPoint(0, width() + painter.fontMetrics().height() / 2));
+	}
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 
@@ -362,7 +398,6 @@ void NetworkLayerLegend::updateLayout() {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 NetworkLayer::NetworkLayer(QObject *parent)
 : Gui::Map::Layer(parent)
-, _showAnnotations(true)
 , _showIssues(true)
 , _colorMode(Network)
 , _currentSymbol(nullptr)
@@ -526,6 +561,7 @@ void NetworkLayer::setColorMode(ColorMode mode, bool force) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void NetworkLayer::setInventory(DataModel::Inventory *inv,
+                                Gui::Map::Annotations *annotations,
                                 const Core::Time *time) {
 	disposeSymbols();
 
@@ -569,7 +605,7 @@ void NetworkLayer::setInventory(DataModel::Inventory *inv,
 			}
 
 			// Got a valid station epoch
-			NetworkLayerSymbol *symbol = new NetworkLayerSymbol(this, sta);
+			NetworkLayerSymbol *symbol = new NetworkLayerSymbol(this, sta, annotations->add(QString()));
 			symbol->setPenWidth(defaultFrameWidth);
 			symbol->setLocation(lat, lon);
 			updateColor(symbol);
@@ -657,17 +693,6 @@ void NetworkLayer::setStationsVisible(QSet<const DataModel::Station*> *set) {
 			s->setDefaultVisibility();
 		}
 	}
-}
-// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-
-
-
-// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-void NetworkLayer::setShowAnnotations(bool enable) {
-	if ( _showAnnotations == enable ) return;
-	_showAnnotations = enable;
-	emit updateRequested();
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -763,7 +788,7 @@ void NetworkLayer::tick() {
 bool NetworkLayer::isInside(const QMouseEvent *event, const QPointF &geoPos) {
 	int x = event->pos().x();
 	int y = event->pos().y();
-	Symbols::const_iterator it = _stationSymbols.end();
+	auto it = _stationSymbols.end();
 	_isInsideSymbol = nullptr;
 
 	while ( it != _stationSymbols.begin() ) {
@@ -803,8 +828,6 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 		s->drawShadow(p);
 	}
 
-	QFont f = p.font();
-
 	QFont fa = Gui::FontAwesome6::font();
 	fa.setPointSize(p.font().pointSize());
 	p.setFont(fa);
@@ -840,80 +863,6 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 						break;
 				}
 			}
-		}
-	}
-
-	p.setFont(f);
-
-	if ( _showAnnotations ) {
-		QFont f(p.font());
-		f.setItalic(true);
-		p.setFont(f);
-
-		int width = canvas->width();
-		int height = canvas->height();
-		int fontHeight = p.fontMetrics().height();
-		Grid grid(height / fontHeight + 1);
-
-		QPen textPen(SCScheme.colors.map.cityLabels);
-		p.setBrush(QColor(255,255,255,192));
-
-		auto it = _stationSymbols.end();
-		while ( it != _stationSymbols.begin() ) {
-			--it;
-			NetworkLayerSymbol *s = *it;
-
-			if ( s->isClipped() || !s->isVisible() ) {
-				continue;
-			}
-
-			int gridY, gridPrevY, gridNextY;
-
-			gridY = (s->y()-s->width()*7/4-6) / fontHeight;
-
-			if ( (gridY < 0) || (gridY >= grid.count()) ) {
-				continue;
-			}
-			if ( (s->x() < 0) || (s->x() >= width) ) {
-				continue;
-			}
-
-			QRect labelRect(p.fontMetrics().boundingRect(s->annotation()));
-			labelRect.moveBottomLeft(s->pos());
-			labelRect.translate(-labelRect.width()/2, -s->width()*7/4-6);
-			labelRect.adjust(-2,-2,2,2);
-
-			QList<QRect> &gridRow = grid[gridY];
-
-			bool foundPlace = true;
-			for ( auto &rect : gridRow ) {
-				if ( rect.intersects(labelRect) ) {
-					foundPlace = false;
-					break;
-				}
-			}
-
-			if ( !foundPlace ) {
-				continue;
-			}
-
-			gridPrevY = gridY - 1;
-			gridNextY = gridY + 1;
-
-			gridRow = grid[gridY];
-			gridRow.append(labelRect);
-
-			if ( gridPrevY >= 0 ) {
-				grid[gridPrevY].append(labelRect);
-			}
-			if ( gridNextY < grid.count() ) {
-				grid[gridNextY].append(labelRect);
-			}
-
-			p.setPen(Qt::NoPen);
-			p.drawRoundedRect(labelRect, 3, 3);
-			p.setPen(textPen);
-			p.drawText(labelRect, Qt::AlignCenter | Qt::TextSingleLine, s->annotation());
 		}
 	}
 

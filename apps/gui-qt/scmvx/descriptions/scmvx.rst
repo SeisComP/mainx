@@ -34,7 +34,7 @@ Section is upcoming.
 .. _sec-scmvx-network-tab:
 
 Network
-------
+-------
 
 Section is upcoming.
 

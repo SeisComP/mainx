@@ -278,7 +278,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	_mapWidget->canvas().addLayer(_annotationLayer);
 	_mapWidget->canvas().addLayer(new ScaleLayer);
 
-	_ui.menuFile->insertAction(_ui.actionOpenEventTable, this->_actionShowSettings);
+	_ui.menuSettings->addAction(this->_actionShowSettings);
 	_ui.menuView->insertAction(_ui.actionShowChannelCodes, this->_actionToggleFullScreen);
 
 	_mapDirty = false;

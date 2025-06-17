@@ -118,8 +118,14 @@
     <addaction name="separator"/>
     <addaction name="actionResetView"/>
    </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>&amp;Settings</string>
+    </property>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
+   <addaction name="menuSettings"/>
   </widget>
   <action name="actionQuit">
    <property name="text">
@@ -327,7 +333,7 @@
   </action>
   <action name="actionOpenFile">
    <property name="text">
-    <string>&amp;Open file</string>
+    <string>&amp;Open XML file</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>

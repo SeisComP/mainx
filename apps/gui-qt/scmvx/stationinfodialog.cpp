@@ -119,7 +119,7 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 	dummy->setAutoFillBackground(true);
 
 	QVBoxLayout *vl = new QVBoxLayout;
-	vl->setMargin(0);
+	vl->setContentsMargins(0, 0, 0, 0);
 	vl->addWidget(dummy);
 
 	_ui.frameTrace->setLayout(vl);

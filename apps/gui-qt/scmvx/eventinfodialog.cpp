@@ -37,10 +37,10 @@ EventInfoDialog::EventInfoDialog(QWidget *parent, Qt::WindowFlags f)
 	_ui.setupUi(this);
 
 	_inspector = new Gui::Inspector;
-	_inspector->layout()->setMargin(0);
+	_inspector->layout()->setContentsMargins(0, 0, 0, 0);
 
 	QVBoxLayout *vl = new QVBoxLayout;
-	vl->setMargin(0);
+	vl->setContentsMargins(0, 0, 0, 0);
 	vl->addWidget(_inspector);
 
 	_ui.frame->setLayout(vl);

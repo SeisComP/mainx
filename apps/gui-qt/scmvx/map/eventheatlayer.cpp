@@ -84,7 +84,7 @@ class HeatMapLegend : public Gui::Map::Legend {
 			else
 				setEnabled(true);
 
-			int fontHeight = qApp->fontMetrics().height();
+			int fontHeight = QFontMetricsF(qApp->font()).height();
 			int w = 0;
 
 			double newRange = _upperBound - _lowerBound;
@@ -101,7 +101,7 @@ class HeatMapLegend : public Gui::Map::Legend {
 
 			int maxItemWidth = 0;
 			for ( int i = 0; i < _items.count(); ++i ) {
-				_items[i].width = QT_FM_WIDTH(qApp->fontMetrics(), _items[i].label);
+				_items[i].width = QT_FM_WIDTH(QFontMetricsF(qApp->font()), _items[i].label);
 				if ( maxItemWidth < _items[i].width ) {
 					maxItemWidth = _items[i].width;
 				}
@@ -165,7 +165,7 @@ class HeatMapLegend : public Gui::Map::Legend {
 	// ----------------------------------------------------------------------
 	public:
 		virtual void draw(const QRect &r, QPainter &p) {
-			int fontHeight = qApp->fontMetrics().height();
+			int fontHeight = QFontMetricsF(qApp->font()).height();
 			int halfFontHeight = fontHeight/2;
 			int contentY = r.top() + halfFontHeight+fontHeight;
 

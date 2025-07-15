@@ -227,7 +227,7 @@ void NetworkLayerLegend::contextResizeEvent(const QSize &size) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void NetworkLayerLegend::draw(const QRect &rect, QPainter &painter) {
-	int fontHeight = qApp->fontMetrics().height();
+	int fontHeight = QFontMetricsF(qApp->font()).height();
 	int w = rect.width();
 	int x = rect.left() + fontHeight/2;
 	int idx = 0;
@@ -367,13 +367,13 @@ void NetworkLayerLegend::updateLayout() {
 	if ( !size.isValid() ) return;
 
 	int ch = size.height();
-	int fontHeight = qApp->fontMetrics().height();
+	int fontHeight = QFontMetricsF(qApp->font()).height();
 
 	_columns = 1;
 
 	_columnWidth = 0;
 	for ( int i = 0; i < _items.count(); ++i ) {
-		int itemWidth = QT_FM_WIDTH(qApp->fontMetrics(), _items[i].first);
+		int itemWidth = QT_FM_WIDTH(QFontMetricsF(qApp->font()), _items[i].first);
 		if ( itemWidth > _columnWidth )
 			_columnWidth = itemWidth;
 	}

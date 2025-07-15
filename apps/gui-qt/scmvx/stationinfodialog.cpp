@@ -20,9 +20,8 @@
 
 #include <seiscomp/datamodel/network.h>
 #include <seiscomp/math/filter.h>
-
 #include <seiscomp/gui/core/compat.h>
-#include <seiscomp/gui/core/fontawesome6.h>
+#include <seiscomp/gui/core/icon.h>
 
 #include "stationinfodialog.h"
 
@@ -139,33 +138,33 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 
 		switch ( stationData->state ) {
 			case Settings::OK:
-				icon = Gui::FontAwesome6::iconSolid(Gui::FontAwesome6::chCheck, QColor(Qt::darkGreen));
+				icon = Gui::icon("check", QColor(Qt::darkGreen));
 				_ui.labelIssueText->setText(tr("No issues detected."));
 				break;
 
 			case Settings::Unknown:
-				icon = Gui::FontAwesome6::iconSolid(Gui::FontAwesome6::chQuestion);
+				icon = Gui::icon("question");
 				_ui.labelIssueText->setText(tr("The station is unknown to the system."));
 				break;
 
 			case Settings::Unconfigured:
-				icon = Gui::FontAwesome6::iconSolid(Gui::FontAwesome6::chWrench, QColor(255,128,0));
+				icon = Gui::icon("wrench", QColor(255,128,0));
 				_ui.labelIssueText->setText(tr("The station does not have global bindings."));
 				break;
 
 			case Settings::NoPrimaryStream:
-				icon = Gui::FontAwesome6::iconSolid(Gui::FontAwesome6::chWrench, QColor(255,128,0));
+				icon = Gui::icon("wrench", QColor(255,128,0));
 				_ui.labelIssueText->setText(tr("The parameter 'detecStream' is not configured by global bindings."));
 				break;
 
 			case Settings::NoChannelGroupMetaData:
-				icon = Gui::FontAwesome6::iconSolid(Gui::FontAwesome6::chDatabase, QColor(Qt::darkRed));
+				icon = Gui::icon("database", QColor(Qt::darkRed));
 				_ui.labelIssueText->setText(tr("The configured bindings channel %1%2 is not part of the stations metadata.")
 				                            .arg(stationData->detecLocid.c_str(), stationData->detecStream.c_str()));
 				break;
 
-			case Settings::NoVerticalCHannelMetaData:
-				icon = Gui::FontAwesome6::iconSolid(Gui::FontAwesome6::chDatabase, QColor(Qt::darkRed));
+			case Settings::NoVerticalChannelMetaData:
+				icon = Gui::icon("database", QColor(Qt::darkRed));
 				_ui.labelIssueText->setText(tr("The configured bindings channel group %1%2 has no defined vertical channel in the stations metadata.")
 				                            .arg(stationData->detecLocid.c_str(), stationData->detecStream.c_str()));
 				break;
@@ -187,7 +186,7 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 		}
 	}
 	else {
-		_ui.labelIssueIcon->setPixmap(Gui::FontAwesome6::icon(Gui::FontAwesome6::chQuestion, QColor(Qt::darkGray)).pixmap(2*em, 2*em));
+		_ui.labelIssueIcon->setPixmap(Gui::icon("question", QColor(Qt::darkGray)).pixmap(2*em, 2*em));
 		_ui.labelIssueText->setText(tr("The station is unknown to the system."));
 	}
 }

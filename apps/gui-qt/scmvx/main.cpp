@@ -320,7 +320,7 @@ bool Application::init() {
 				data->state = Settings::Unconfigured;
 			}
 			else if ( !data->channel ) {
-				data->state = !foundVerticalChannel ? Settings::NoVerticalCHannelMetaData : Settings::NoChannelGroupMetaData;
+				data->state = !foundVerticalChannel ? Settings::NoVerticalChannelMetaData : Settings::NoChannelGroupMetaData;
 			}
 		}
 	}

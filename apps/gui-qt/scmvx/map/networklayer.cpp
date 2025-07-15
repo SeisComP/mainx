@@ -20,10 +20,8 @@
 
 #include <seiscomp/gui/core/application.h>
 #include <seiscomp/gui/core/compat.h>
-#include <seiscomp/gui/core/fontawesome6.h>
-
+#include <seiscomp/gui/core/icon.h>
 #include <seiscomp/gui/map/canvas.h>
-
 
 #include <algorithm>
 
@@ -61,17 +59,13 @@ bool topToBottom(const NetworkLayerSymbol *s1, const NetworkLayerSymbol *s2) {
 }
 
 
-void drawWarningSymbol(QPainter &painter, const QPoint &center, const QChar &ch) {
-	static QColor errorBorder(192,0,0);
-
+void drawWarningSymbol(QPainter &painter, const QPoint &center, const QPixmap &pixmap) {
+	static QColor errorBorder(192, 0, 0);
 	int size = painter.fontMetrics().height();
-
-	painter.setPen(QPen(errorBorder, qMax(2,size/5)));
+	painter.setPen(QPen(errorBorder, qMax(2, size / 5)));
 	painter.setBrush(Qt::white);
 	painter.drawEllipse(center, size, size);
-
-	painter.setPen(Qt::black);
-	painter.drawText(QRect(center.x()-size/2, center.y()-size/2, size, size), Qt::AlignCenter, ch);
+	painter.drawPixmap(center.x() - size / 2, center.y() - size / 2, pixmap);
 }
 
 
@@ -828,36 +822,48 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 		s->drawShadow(p);
 	}
 
-	QFont fa = Gui::FontAwesome6::fontSolid();
-	fa.setPointSize(p.font().pointSize());
-
 	for ( int i = Gui::Map::Symbol::NONE; i <= Gui::Map::Symbol::HIGH; ++i ) {
 		foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
-			if ( s->isClipped() || !s->isVisible() || (s->priority() != i) ) continue;
+			if ( s->isClipped() || !s->isVisible() || (s->priority() != i) ) {
+				continue;
+			}
 
 			s->draw(canvas, p);
 
 			if ( _showIssues && (s->state() != Settings::OK) ) {
-				p.setFont(fa);
 				int em = qMax(p.fontMetrics().height() - 4, 0) * 0.707106781186;
 				QPoint center = s->pos() + QPoint(s->width() + em, -em - s->width() * 3 / 2);
 
+				static OPT(QPixmap) pmQuestion, pmWrench, pmUnlink, pmDatabase;
+
 				switch ( s->state() ) {
 					case Settings::Unknown:
-						drawWarningSymbol(p, center, Gui::FontAwesome6::chQuestion);
+						if ( !pmQuestion ) {
+							pmQuestion = Gui::icon("question", Qt::black).pixmap(p.fontMetrics().height());
+						}
+						drawWarningSymbol(p, center, *pmQuestion);
 						break;
 
 					case Settings::Unconfigured:
-						drawWarningSymbol(p, center, Gui::FontAwesome6::chWrench);
+						if ( !pmWrench ) {
+							pmWrench = Gui::icon("wrench", Qt::black).pixmap(p.fontMetrics().height());
+						}
+						drawWarningSymbol(p, center, *pmWrench);
 						break;
 
 					case Settings::NoPrimaryStream:
-						drawWarningSymbol(p, center, Gui::FontAwesome6::chUnlink);
+						if ( !pmUnlink ) {
+							pmUnlink = Gui::icon("unlink", Qt::black).pixmap(p.fontMetrics().height());
+						}
+						drawWarningSymbol(p, center, *pmUnlink);
 						break;
 
 					case Settings::NoChannelGroupMetaData:
-					case Settings::NoVerticalCHannelMetaData:
-						drawWarningSymbol(p, center, Gui::FontAwesome6::chDatabase);
+					case Settings::NoVerticalChannelMetaData:
+						if ( !pmDatabase ) {
+							pmDatabase = Gui::icon("database", Qt::black).pixmap(p.fontMetrics().height());
+						}
+						drawWarningSymbol(p, center, *pmDatabase);
 						break;
 
 					default:

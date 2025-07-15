@@ -47,7 +47,7 @@ struct Settings : System::Application::AbstractSettings {
 		Unconfigured,
 		NoPrimaryStream,
 		NoChannelGroupMetaData,
-		NoVerticalCHannelMetaData,
+		NoVerticalChannelMetaData,
 		QCWarning,
 		QCError
 	};

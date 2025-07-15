@@ -363,9 +363,9 @@ void StationSymbol::generateShape(QPolygon &polygon, int posX, int posY, int rad
 		default:
 		case Gui::Scheme::Map::StationSymbol::Triangle:
 			polygon
-				<< QPoint(posX, posY - radius)
-				<< QPoint(posX + int(0.867 * radius), posY + int(0.5 * radius))
-				<< QPoint(posX - int(0.867 * radius), posY + int(0.5 * radius));
+				<< QPoint(posX, posY - radius * 3 / 2)
+				<< QPoint(posX + int(0.867 * radius), posY)
+				<< QPoint(posX - int(0.867 * radius), posY);
 			break;
 		case Gui::Scheme::Map::StationSymbol::Diamond:
 		{

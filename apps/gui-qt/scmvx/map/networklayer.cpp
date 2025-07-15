@@ -59,13 +59,20 @@ bool topToBottom(const NetworkLayerSymbol *s1, const NetworkLayerSymbol *s2) {
 }
 
 
-void drawWarningSymbol(QPainter &painter, const QPoint &center, const QPixmap &pixmap) {
+void drawWarningSymbol(QPainter &painter, const QPoint &lowerLeft, const QPixmap &pixmap) {
 	static QColor errorBorder(192, 0, 0);
-	int size = painter.fontMetrics().height();
+	QSize layoutSize = pixmap.size() / pixmap.devicePixelRatio();
+	int size = qMax(layoutSize.width(), layoutSize.height());
+	int radius = size * 75 / 100;
+	QPoint center = lowerLeft + QPoint(radius, -radius);
 	painter.setPen(QPen(errorBorder, qMax(2, size / 5)));
 	painter.setBrush(Qt::white);
-	painter.drawEllipse(center, size, size);
-	painter.drawPixmap(center.x() - size / 2, center.y() - size / 2, pixmap);
+	painter.drawEllipse(center, radius, radius);
+	painter.drawPixmap(
+		center.x() - layoutSize.width() / 2,
+		center.y() - layoutSize.height() / 2,
+		pixmap
+	);
 }
 
 
@@ -831,8 +838,7 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 			s->draw(canvas, p);
 
 			if ( _showIssues && (s->state() != Settings::OK) ) {
-				int em = qMax(p.fontMetrics().height() - 4, 0) * 0.707106781186;
-				QPoint center = s->pos() + QPoint(s->width() + em, -em - s->width() * 3 / 2);
+				QPoint lowerLeft = s->pos() + QPoint(0, -s->width() / 2);
 
 				static OPT(QPixmap) pmQuestion, pmWrench, pmUnlink, pmDatabase;
 
@@ -841,21 +847,21 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 						if ( !pmQuestion ) {
 							pmQuestion = Gui::icon("question", Qt::black).pixmap(p.fontMetrics().height());
 						}
-						drawWarningSymbol(p, center, *pmQuestion);
+						drawWarningSymbol(p, lowerLeft, *pmQuestion);
 						break;
 
 					case Settings::Unconfigured:
 						if ( !pmWrench ) {
 							pmWrench = Gui::icon("wrench", Qt::black).pixmap(p.fontMetrics().height());
 						}
-						drawWarningSymbol(p, center, *pmWrench);
+						drawWarningSymbol(p, lowerLeft, *pmWrench);
 						break;
 
 					case Settings::NoPrimaryStream:
 						if ( !pmUnlink ) {
 							pmUnlink = Gui::icon("unlink", Qt::black).pixmap(p.fontMetrics().height());
 						}
-						drawWarningSymbol(p, center, *pmUnlink);
+						drawWarningSymbol(p, lowerLeft, *pmUnlink);
 						break;
 
 					case Settings::NoChannelGroupMetaData:
@@ -863,7 +869,7 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 						if ( !pmDatabase ) {
 							pmDatabase = Gui::icon("database", Qt::black).pixmap(p.fontMetrics().height());
 						}
-						drawWarningSymbol(p, center, *pmDatabase);
+						drawWarningSymbol(p, lowerLeft, *pmDatabase);
 						break;
 
 					default:

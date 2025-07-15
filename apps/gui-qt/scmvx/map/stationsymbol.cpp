@@ -391,7 +391,7 @@ void StationSymbol::generateShape(QPolygon &polygon, int posX, int posY, int rad
 				<< QPoint(posX - halfWidth, posY - radius2 - height)
 				<< QPoint(posX + halfWidth, posY - radius2 - height)
 				<< QPoint(posX + halfWidth, posY - radius2)
-			<< QPoint(posX + radius2, posY - radius2);
+				<< QPoint(posX + radius2, posY - radius2);
 			break;
 		}
 	}

@@ -86,14 +86,12 @@ class ShapeCache : public QMap<int, QPair<int, QPolygon*> > {
 		typedef QMap<int, RefCountedPolygon> Base;
 
 		~ShapeCache() {
-			Base::iterator it = begin();
-			for ( ; it != end(); ++it )
+			for ( auto it = begin(); it != end(); ++it )
 				delete it.value().second;
 		}
 
 		QPolygon *shape(int size) {
-			Base::iterator it = find(size);
-			if ( it != end() ) {
+			if ( auto it = find(size); it != end() ) {
 				++it.value().first;
 				return it.value().second;
 			}
@@ -108,8 +106,10 @@ class ShapeCache : public QMap<int, QPair<int, QPolygon*> > {
 		}
 
 		void dropShape(int size) {
-			Base::iterator it = find(size);
-			if ( it == end() ) return;
+			auto it = find(size);
+			if ( it == end() ) {
+				return;
+			}
 
 			--it.value().first;
 
@@ -136,7 +136,7 @@ ShapeCache shapeCache;
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 StationSymbol::StationSymbol()
 : Symbol(nullptr) {
-	init();
+	setWidth(SCScheme.map.stationSize);
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -146,7 +146,7 @@ StationSymbol::StationSymbol()
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 StationSymbol::StationSymbol(double latitude, double longitude)
 : Symbol(latitude, longitude, nullptr) {
-	init();
+	setWidth(SCScheme.map.stationSize);
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -155,11 +155,13 @@ StationSymbol::StationSymbol(double latitude, double longitude)
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 StationSymbol::~StationSymbol() {
-	if ( _stationPolygon )
+	if ( _stationPolygon ) {
 		shapeCache.dropShape(_width);
+	}
 
-	if ( _framePolygon )
-		shapeCache.dropShape(_width + _frameSize*2);
+	if ( _framePolygon ) {
+		shapeCache.dropShape(_width + _frameSize * 2);
+	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -168,12 +170,10 @@ StationSymbol::~StationSymbol() {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool StationSymbol::isInside(int px, int py) const {
-	if ( !_stationPolygon ) return false;
-#if QT_VERSION < 0x040300
-	return _stationPolygon->boundingRect().contains(x, y);
-#else
-	return _stationPolygon->containsPoint(QPoint(px-x(), py-y()), Qt::OddEvenFill);
-#endif
+	if ( !_stationPolygon ) {
+		return false;
+	}
+	return _stationPolygon->containsPoint(QPoint(px - x(), py - y()), Qt::OddEvenFill);
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -243,8 +243,9 @@ void StationSymbol::setFrameSize(int frameSize) {
 
 	_frameSize = frameSize;
 
-	if ( _frameSize > 0 )
+	if ( _frameSize > 0 ) {
 		_framePolygon = shapeCache.shape(_width + _frameSize*2);
+	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -282,7 +283,9 @@ int StationSymbol::width() const {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void StationSymbol::customDraw(const Gui::Map::Canvas *, QPainter &painter) {
-	if ( !_stationPolygon ) return;
+	if ( !_stationPolygon ) {
+		return;
+	}
 
 	QPen pen(Qt::MiterJoin);
 	QBrush brush(Qt::SolidPattern);
@@ -319,12 +322,13 @@ void StationSymbol::drawShadow(QPainter &painter) {
 	static int blurRadius = 1;
 	static int shadowCacheSize = -1;
 	static QImage shadowCache;
-	static QMutex cacheMutex;
 
-	if ( !_stationPolygon ) return;
+	if ( !_stationPolygon ) {
+		return;
+	}
 
 	if ( shadowCacheSize != _width ) {
-		int dim = _width*2+blurRadius*2;
+		int dim = _width * 2 + blurRadius * 2;
 		shadowCache = QImage(dim, dim, QImage::Format_ARGB32);
 
 		shadowCache.fill(0);
@@ -333,37 +337,20 @@ void StationSymbol::drawShadow(QPainter &painter) {
 			QPainter p(&shadowCache);
 			p.setRenderHint(QPainter::Antialiasing);
 			p.setPen(Qt::NoPen);
-			p.setBrush(QColor(64,64,64,160));
+			p.setBrush(QColor(64, 64, 64, 160));
 
 			p.translate(blurRadius, dim-blurRadius);
-			p.scale(0.7,0.5);
-			p.shear(-1,0.2);
+			p.scale(0.7, 0.5);
+			p.shear(-1, 0.2);
 			p.drawPolygon(*_stationPolygon);
 			p.resetTransform();
 		}
 
 		blurImage(shadowCache, blurRadius);
-
 		shadowCacheSize = _width;
 	}
 
-	painter.drawImage(x()-blurRadius, y()-shadowCache.height()+blurRadius, shadowCache);
-}
-// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-
-
-
-// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-void StationSymbol::init() {
-	_stationPolygon = nullptr;
-	_framePolygon = nullptr;
-	_fillColor = Qt::black;
-	_penColor  = Qt::black;
-	_penWidth  = 1.5;
-	_frameSize = 0;
-	setWidth(SCScheme.map.stationSize);
-	setType(0);
+	painter.drawImage(x() - blurRadius, y() - shadowCache.height() + blurRadius, shadowCache);
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -372,38 +359,42 @@ void StationSymbol::init() {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void StationSymbol::generateShape(QPolygon &polygon, int posX, int posY, int radius) {
-	/*
-	polygon
-		<< QPoint(posX, posY - radius - radius1 - radius2)
-		<< QPoint(posX + int(0.867 * radius), posY - radius2)
-		<< QPoint(posX, posY)
-		<< QPoint(posX - int(0.867 * radius), posY - radius2);
-	*/
-
-	int radius1 = radius / 2;
-	int radius2 = radius / 4;
-
-	polygon
-		<< QPoint(posX, posY - radius - radius1 - radius2)
-		<< QPoint(posX + int(0.867 * radius), posY - radius - radius1)
-		<< QPoint(posX, posY)
-		<< QPoint(posX - int(0.867 * radius), posY - radius - radius1);
-
-	/*
-	int radius1 = radius;
-	int radius2 = radius / 3;
-	int halfWidth = radius1;
-	int height = radius * 2 * 3 / 4;
-
-	polygon
-		<< QPoint(posX, posY)
-		<< QPoint(posX - radius2, posY - radius2)
-		<< QPoint(posX - halfWidth, posY - radius2)
-		<< QPoint(posX - halfWidth, posY - radius2 - height)
-		<< QPoint(posX + halfWidth, posY - radius2 - height)
-		<< QPoint(posX + halfWidth, posY - radius2)
-		<< QPoint(posX + radius2, posY - radius2);
-	*/
+	switch ( SCScheme.map.stationSymbol ) {
+		default:
+		case Gui::Scheme::Map::StationSymbol::Triangle:
+			polygon
+				<< QPoint(posX, posY - radius)
+				<< QPoint(posX + int(0.867 * radius), posY + int(0.5 * radius))
+				<< QPoint(posX - int(0.867 * radius), posY + int(0.5 * radius));
+			break;
+		case Gui::Scheme::Map::StationSymbol::Diamond:
+		{
+			int radius1 = radius / 2;
+			int radius2 = radius / 4;
+			polygon
+				<< QPoint(posX, posY - radius - radius1 - radius2)
+				<< QPoint(posX + int(0.867 * radius), posY - radius - radius1)
+				<< QPoint(posX, posY)
+				<< QPoint(posX - int(0.867 * radius), posY - radius - radius1);
+			break;
+		}
+		case Gui::Scheme::Map::StationSymbol::Box:
+		{
+			int radius1 = radius;
+			int radius2 = radius / 3;
+			int halfWidth = radius1;
+			int height = radius * 2 * 3 / 4;
+			polygon
+				<< QPoint(posX, posY)
+				<< QPoint(posX - radius2, posY - radius2)
+				<< QPoint(posX - halfWidth, posY - radius2)
+				<< QPoint(posX - halfWidth, posY - radius2 - height)
+				<< QPoint(posX + halfWidth, posY - radius2 - height)
+				<< QPoint(posX + halfWidth, posY - radius2)
+			<< QPoint(posX + radius2, posY - radius2);
+			break;
+		}
+	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

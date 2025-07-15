@@ -78,25 +78,18 @@ class StationSymbol : public Gui::Map::Symbol {
 
 
 	// ----------------------------------------------------------------------
-	//  Private methods
-	// ----------------------------------------------------------------------
-	private:
-		void init();
-
-
-	// ----------------------------------------------------------------------
 	//  Private members
 	// ----------------------------------------------------------------------
 	private:
-		int           _width;
-		int           _frameSize;
+		int           _width{0};
+		int           _frameSize{0};
 		QColor        _frameColor;
-		QPolygon     *_stationPolygon;
-		QPolygon     *_framePolygon;
+		QPolygon     *_stationPolygon{nullptr};
+		QPolygon     *_framePolygon{nullptr};
 
-		QColor        _fillColor;
-		qreal         _penWidth;
-		QColor        _penColor;
+		QColor        _fillColor{Qt::black};
+		QColor        _penColor{Qt::black};
+		qreal         _penWidth{1.5};
 };
 
 

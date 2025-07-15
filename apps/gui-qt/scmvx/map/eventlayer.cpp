@@ -114,8 +114,14 @@ EventLayer::EventLayer(QObject* parent, DataModel::PublicObjectCache *cache)
 void EventLayer::setCurrentEvent(DataModel::Event *evt) {
 	auto lastCurrent = _currentEvent;
 
-	if ( !evt )
+	if ( _currentEvent ) {
+		_currentEvent->setType(0);
+		_currentEvent->setDepth(_currentEvent->depth());
+	}
+
+	if ( !evt ) {
 		_currentEvent = nullptr;
+	}
 	else {
 		auto it = _eventSymbols.find(evt->publicID());
 		if ( it == _eventSymbols.end() ) {
@@ -126,8 +132,9 @@ void EventLayer::setCurrentEvent(DataModel::Event *evt) {
 		}
 	}
 
-	if ( lastCurrent != _currentEvent )
+	if ( lastCurrent != _currentEvent ) {
 		emit updateRequested();
+	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

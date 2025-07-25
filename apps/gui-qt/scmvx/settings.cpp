@@ -39,7 +39,7 @@ Settings global;
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void Settings::accept(System::Application::SettingsLinker &linker) {
 	linker
-	& cli(displayMode, "MapViewX", "displaymode",
+	& cli(displayMode, "MapViewX", "display-mode",
 	      "Start mapview with given mode. Modes: groundmotion, qualitycontrol.")
 	& cli(inputFile, "MapViewX", "input-file,i",
 	      "Load events in given XML file during startup and switch to offline "

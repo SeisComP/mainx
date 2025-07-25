@@ -106,10 +106,10 @@ struct Settings : System::Application::AbstractSettings {
 	struct {
 		void accept(System::Application::SettingsLinker &linker) {
 			linker
-			& cfg(left, "lonMin")
-			& cfg(right, "lonMax")
-			& cfg(bottom, "latMin")
-			& cfg(top, "latMax");
+			& cfg(left, "lonmin")
+			& cfg(right, "lonmax")
+			& cfg(bottom, "latmin")
+			& cfg(top, "latmax");
 		}
 
 		bool isNull() {
@@ -123,10 +123,10 @@ struct Settings : System::Application::AbstractSettings {
 			return r;
 		}
 
-		double left{0};
-		double right{0};
-		double bottom{0};
-		double top{0};
+		double left{-180};
+		double right{180};
+		double bottom{-90};
+		double top{90};
 	}                 initialRegion;
 };
 

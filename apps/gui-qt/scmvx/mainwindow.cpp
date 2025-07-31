@@ -311,8 +311,8 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	_mapWidget->canvas().addLayer(_eventHeatLayer);
 	_mapWidget->canvas().addLayer(_stationLayer);
 	_mapWidget->canvas().addLayer(_eventLayer);
-	_mapWidget->canvas().addLayer(_currentEventLayer);
 	_mapWidget->canvas().addLayer(_annotationLayer);
+	_mapWidget->canvas().addLayer(_currentEventLayer);
 	_mapWidget->canvas().addLayer(new ScaleLayer);
 
 	_ui.menuSettings->addAction(this->_actionShowSettings);

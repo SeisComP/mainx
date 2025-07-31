@@ -57,6 +57,10 @@ void Settings::accept(System::Application::SettingsLinker &linker) {
 	& cfg(showLatestEvent, "showLatestEvent")
 	& cfg(displayMode, "displaymode")
 	& cfg(initialRegion, "display")
+	& cfg(stationLegendPosition, "mapLegendPosition")
+	& cfg(eventLegendPosition, "eventLegendPosition")
+	& cfg(annotations, "annotations")
+	& cfg(annotationsWithChannels, "annotationsWithChannels")
 	;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

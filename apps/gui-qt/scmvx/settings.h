@@ -98,6 +98,10 @@ struct Settings : System::Application::AbstractSettings {
 	std::string       displayMode;
 	bool              showLatestEvent{true};
 	bool              showLegend{false};
+	std::string       stationLegendPosition;
+	std::string       eventLegendPosition;
+	bool              annotations{false};
+	bool              annotationsWithChannels{true};
 
 	struct {
 		void accept(System::Application::SettingsLinker &linker) {

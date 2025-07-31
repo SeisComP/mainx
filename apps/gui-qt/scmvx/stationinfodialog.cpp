@@ -42,8 +42,6 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
                                      const Settings::StationData *stationData,
                                      QWidget *parent, Qt::WindowFlags f)
 : QDialog(parent, f) {
-	int em = fontMetrics().height();
-
 	_ui.setupUi(this);
 
 	_timeScale = new Gui::TimeScale(this);
@@ -57,7 +55,7 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 		_trace[i]->setDrawOffset(false);
 
 		_scale[i] = new Gui::VRuler(this);
-		_scale[i]->setFixedWidth(QT_FM_WIDTH(fontMetrics(), NUMBER_REFERENCE_STRING) + em + 4);
+		_scale[i]->setFixedWidth(QT_FM_WIDTH(fontMetrics(), NUMBER_REFERENCE_STRING) + fontMetrics().height() + 4);
 
 		connect(_timeScale, SIGNAL(changedInterval(double,double,double)),
 		        _trace[i], SLOT(setGridSpacing(double,double,double)));
@@ -174,8 +172,7 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 		}
 
 		if ( !icon.isNull() ) {
-			_ui.labelIssueIcon->setPixmap(icon.pixmap(2 * em, 2 * em));
-			_ui.labelIssueIcon->setFixedWidth(2 * em);
+			_ui.labelIssueIcon->setPixmap(Gui::pixmap(this, icon, 2.0));
 		}
 
 		if ( stationData->proc ) {
@@ -186,7 +183,7 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 		}
 	}
 	else {
-		_ui.labelIssueIcon->setPixmap(Gui::icon("question", QColor(Qt::darkGray)).pixmap(2*em, 2*em));
+		_ui.labelIssueIcon->setPixmap(Gui::pixmap(this, "question", Qt::darkGray, 2.0));
 		_ui.labelIssueText->setText(tr("The station is unknown to the system."));
 	}
 }

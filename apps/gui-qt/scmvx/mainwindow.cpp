@@ -23,7 +23,9 @@
 #include <seiscomp/logging/log.h>
 #include <seiscomp/core/datamessage.h>
 #include <seiscomp/gui/core/application.h>
+#include <seiscomp/gui/core/utils.h>
 #include <seiscomp/gui/datamodel/eventlayer.h>
+#include <seiscomp/gui/datamodel/origindialog.h>
 #include <seiscomp/io/archive/xmlarchive.h>
 
 #include <QFileDialog>
@@ -131,6 +133,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	connect(_ui.tabWidget, SIGNAL(currentChanged(int)), this, SLOT(switchTab(int)));
 
 	_mapWidget = new Gui::MapWidget(SCApp->mapsDesc());
+	_mapWidget->installEventFilter(this);
 	_mapWidget->canvas().setLegendMargin(9);
 
 	_eventListView = new Gui::EventListView(SCApp->query(), false);
@@ -821,6 +824,82 @@ void MainWindow::updateGroundMotion(Settings::StationData *data) {
 	if ( data->infoData ) {
 		static_cast<StationInfoDialog*>(data->infoData)->processingDataUpdated(data);
 	}
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+bool MainWindow::eventFilter(QObject *object, QEvent *event) {
+	if ( object == _mapWidget ) {
+		if ( event->type() == QEvent::MouseButtonRelease ) {
+			auto mouseEvent = static_cast<QMouseEvent*>(event);
+
+			if ( mouseEvent->button() == Qt::LeftButton	&& mouseEvent->modifiers() == Qt::ShiftModifier ) {
+				showMapCoordinates(mouseEvent->pos());
+			}
+			else if ( mouseEvent->button() == Qt::MiddleButton ) {
+				sendArtificialOrigin(mouseEvent->pos());
+				return true;
+			}
+		}
+	}
+
+	return Gui::MainWindow::eventFilter(object, event);
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void MainWindow::showMapCoordinates(const QPoint &pos) {
+	QPointF mapPos;
+	if ( _mapWidget->canvas().projection()->unproject(mapPos, pos) ) {
+		statusBar()->showMessage(
+			QString("Pos: %1 %2")
+			.arg(
+				Gui::latitudeToString(mapPos.y(), true, true, -1),
+				Gui::longitudeToString(mapPos.x(), true, true, -1)
+			),
+			2000
+		);
+	}
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void MainWindow::sendArtificialOrigin(const QPoint &pos) {
+	QPointF mapPos;
+	if ( !_mapWidget->canvas().projection()->unproject(mapPos, pos) ) {
+		return;
+	}
+
+	Gui::OriginDialog dialog(mapPos.x(), mapPos.y(), this);
+	dialog.move(pos);
+
+	if ( dialog.exec() != QDialog::Accepted ) {
+		return;
+	}
+
+	DataModel::Origin* origin = DataModel::Origin::Create();
+	DataModel::CreationInfo ci;
+
+	ci.setAgencyID(SCApp->agencyID());
+	ci.setAuthor(SCApp->author());
+	ci.setCreationTime(Core::Time::UTC());
+
+	origin->setCreationInfo(ci);
+	origin->setLongitude(dialog.longitude());
+	origin->setLatitude(dialog.latitude());
+	origin->setDepth(DataModel::RealQuantity(dialog.depth()));
+	origin->setTime(Core::Time(dialog.getTime_t()));
+
+	SCApp->sendCommand(Gui::CM_OBSERVE_LOCATION, "", origin);
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

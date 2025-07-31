@@ -65,8 +65,13 @@ class MainWindow : public Gui::MainWindow {
 		void updateGroundMotion(Settings::StationData *data);
 
 
+	protected:
+		bool eventFilter(QObject *object, QEvent *event) override;
+
+
 	public slots:
 		void addObject(const QString &parentID, Seiscomp::DataModel::Object*);
+
 
 	private slots:
 		void openFile();
@@ -109,6 +114,8 @@ class MainWindow : public Gui::MainWindow {
 
 	private:
 		void updateCurrentEvent();
+		void showMapCoordinates(const QPoint &pos);
+		void sendArtificialOrigin(const QPoint &pos);
 
 
 	private:

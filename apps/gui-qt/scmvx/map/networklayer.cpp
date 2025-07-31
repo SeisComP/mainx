@@ -845,21 +845,21 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 				switch ( s->state() ) {
 					case Settings::Unknown:
 						if ( !pmQuestion ) {
-							pmQuestion = Gui::icon("question", Qt::black).pixmap(p.fontMetrics().height());
+							pmQuestion = Gui::pixmap(p.fontMetrics(), "question", QColor(Qt::black));
 						}
 						drawWarningSymbol(p, lowerLeft, *pmQuestion);
 						break;
 
 					case Settings::Unconfigured:
 						if ( !pmWrench ) {
-							pmWrench = Gui::icon("wrench", Qt::black).pixmap(p.fontMetrics().height());
+							pmWrench = Gui::pixmap(p.fontMetrics(), "wrench", QColor(Qt::black));
 						}
 						drawWarningSymbol(p, lowerLeft, *pmWrench);
 						break;
 
 					case Settings::NoPrimaryStream:
 						if ( !pmUnlink ) {
-							pmUnlink = Gui::icon("unlink", Qt::black).pixmap(p.fontMetrics().height());
+							pmUnlink = Gui::pixmap(p.fontMetrics(), "unlink", QColor(Qt::black));
 						}
 						drawWarningSymbol(p, lowerLeft, *pmUnlink);
 						break;
@@ -867,7 +867,7 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 					case Settings::NoChannelGroupMetaData:
 					case Settings::NoVerticalChannelMetaData:
 						if ( !pmDatabase ) {
-							pmDatabase = Gui::icon("database", Qt::black).pixmap(p.fontMetrics().height());
+							pmDatabase = Gui::pixmap(p.fontMetrics(), "database", QColor(Qt::black));
 						}
 						drawWarningSymbol(p, lowerLeft, *pmDatabase);
 						break;

@@ -178,6 +178,23 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	_eventLayer = new EventLayer(_mapWidget, &_cache);
 	_eventLayer->setVisible(true);
 
+	try {
+		auto pos = SCApp->configGetString("eventLegendPosition");
+		if ( pos == "topleft" ) {
+			_eventLayer->legend(0)->setArea(Qt::AlignLeft | Qt::AlignTop);
+		}
+		else if ( pos == "topright" ) {
+			_eventLayer->legend(0)->setArea(Qt::AlignRight | Qt::AlignTop);
+		}
+		else if ( pos == "bottomright" ) {
+			_eventLayer->legend(0)->setArea(Qt::AlignRight | Qt::AlignBottom);
+		}
+		else if ( pos == "bottomleft" ) {
+			_eventLayer->legend(0)->setArea(Qt::AlignLeft | Qt::AlignBottom);
+		}
+	}
+	catch ( ... ) {}
+
 	connect(_eventListView, SIGNAL(reset()), _eventLayer, SLOT(clear()));
 	connect(_eventListView, SIGNAL(eventAddedToList(Seiscomp::DataModel::Event*,bool)),
 	        _eventLayer, SLOT(addEvent(Seiscomp::DataModel::Event*,bool)));
@@ -198,6 +215,24 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	_annotationLayer->setVisible(_ui.actionShowStationAnnotations->isChecked());
 
 	_stationLayer = new NetworkLayer(_mapWidget);
+
+	try {
+		auto pos = SCApp->configGetString("mapLegendPosition");
+		if ( pos == "topleft" ) {
+			_stationLayer->mainLegend()->setArea(Qt::AlignLeft | Qt::AlignTop);
+		}
+		else if ( pos == "topright" ) {
+			_stationLayer->mainLegend()->setArea(Qt::AlignRight | Qt::AlignTop);
+		}
+		else if ( pos == "bottomright" ) {
+			_stationLayer->mainLegend()->setArea(Qt::AlignRight | Qt::AlignBottom);
+		}
+		else if ( pos == "bottomleft" ) {
+			_stationLayer->mainLegend()->setArea(Qt::AlignLeft | Qt::AlignBottom);
+		}
+	}
+	catch ( ... ) {}
+
 	_stationLayer->setInventory(Client::Inventory::Instance()->inventory(), _annotationLayer->annotations());
 	_stationLayer->setShowChannelCodes(_ui.actionShowChannelCodes->isChecked());
 	_stationLayer->setShowIssues(_ui.actionShowStationIssues->isChecked());

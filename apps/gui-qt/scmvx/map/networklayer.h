@@ -200,6 +200,8 @@ class NetworkLayer : public Gui::Map::Layer {
 
 		void setStationsVisible(QSet<const DataModel::Station *> *);
 
+		Gui::Map::Legend *mainLegend() const;
+
 
 	// ----------------------------------------------------------------------
 	//  Signals

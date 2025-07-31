@@ -212,6 +212,12 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	        this, SLOT(updateEventTabText()));
 
 	_annotationLayer = new Gui::Map::AnnotationLayer(_mapWidget, new Gui::Map::Annotations);
+
+	try {
+		_ui.actionShowStationAnnotations->setChecked(SCApp->configGetBool("annotations"));
+	}
+	catch ( ... ) {}
+
 	_annotationLayer->setVisible(_ui.actionShowStationAnnotations->isChecked());
 
 	_stationLayer = new NetworkLayer(_mapWidget);
@@ -233,6 +239,11 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	}
 	catch ( ... ) {}
 
+	try {
+		_ui.actionShowChannelCodes->setChecked(SCApp->configGetBool("annotationsWithChannels"));
+	}
+	catch ( ... ) {}
+
 	_stationLayer->setInventory(Client::Inventory::Instance()->inventory(), _annotationLayer->annotations());
 	_stationLayer->setShowChannelCodes(_ui.actionShowChannelCodes->isChecked());
 	_stationLayer->setShowIssues(_ui.actionShowStationIssues->isChecked());
@@ -244,7 +255,9 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	        this, SLOT(stationClicked(Seiscomp::DataModel::Station*)));
 
 	connect(_ui.actionShowStationAnnotations, SIGNAL(toggled(bool)), _annotationLayer, SLOT(setVisible(bool)));
+	connect(_ui.actionShowStationAnnotations, SIGNAL(toggled(bool)), _mapWidget, SLOT(update()));
 	connect(_ui.actionShowChannelCodes, SIGNAL(toggled(bool)), _stationLayer, SLOT(setShowChannelCodes(bool)));
+	connect(_ui.actionShowChannelCodes, SIGNAL(toggled(bool)), _mapWidget, SLOT(update()));
 	connect(_ui.actionShowStationIssues, SIGNAL(toggled(bool)), _stationLayer, SLOT(setShowIssues(bool)));
 	connect(_ui.actionSearchStation, SIGNAL(triggered()), this, SLOT(searchStation()));
 	connect(_ui.actionCenterMapOnEventUpdate, SIGNAL(toggled(bool)), this, SLOT(toggleCentering(bool)));

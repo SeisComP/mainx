@@ -172,7 +172,7 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 		}
 
 		if ( !icon.isNull() ) {
-			_ui.labelIssueIcon->setPixmap(Gui::pixmap(this, icon, 2.0));
+			_ui.labelIssueIcon->setPixmap(icon.pixmap(fontMetrics().height() * 2));
 		}
 
 		if ( stationData->proc ) {

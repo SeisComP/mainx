@@ -237,14 +237,14 @@ qreal StationSymbol::penWidth() const {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void StationSymbol::setFrameSize(int frameSize) {
 	if ( _framePolygon ) {
-		shapeCache.dropShape(_width + _frameSize*2);
+		shapeCache.dropShape(_width + _frameSize * 2);
 		_framePolygon = nullptr;
 	}
 
 	_frameSize = frameSize;
 
 	if ( _frameSize > 0 ) {
-		_framePolygon = shapeCache.shape(_width + _frameSize*2);
+		_framePolygon = shapeCache.shape(_width + _frameSize * 2);
 	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -297,9 +297,9 @@ void StationSymbol::customDraw(const Gui::Map::Canvas *, QPainter &painter) {
 		brush.setColor(_frameColor);
 		painter.setBrush(brush);
 
-		painter.translate(0, _frameSize*2);
+		painter.translate(0, _frameSize);
 		painter.drawPolygon(*_framePolygon);
-		painter.translate(0, -_frameSize*2);
+		painter.translate(0, -_frameSize);
 	}
 
 	pen.setWidthF(_penWidth);

@@ -109,6 +109,7 @@
 	<addaction name="actionShowLatestEvent"/>
     <addaction name="actionShowMapLegend"/>
     <addaction name="actionShowStationIssues"/>
+    <addaction name="actionShowUnboundStations"/>
     <addaction name="actionShowStationAnnotations"/>
     <addaction name="actionOpenEventTable"/>
     <addaction name="actionShowChannelCodes"/>
@@ -205,6 +206,20 @@
    </property>
    <property name="shortcut">
     <string>F8</string>
+   </property>
+  </action>
+  <action name="actionShowUnboundStations">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show unbound stations</string>
+   </property>
+   <property name="shortcut">
+    <string>Shift+F8</string>
    </property>
   </action>
   <action name="actionQCDelay">

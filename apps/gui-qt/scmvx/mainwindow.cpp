@@ -229,10 +229,12 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	}
 
 	_ui.actionShowChannelCodes->setChecked(global.annotationsWithChannels);
+	_ui.actionShowUnboundStations->setChecked(global.showUnboundStations);
 
 	_stationLayer->setInventory(Client::Inventory::Instance()->inventory(), _annotationLayer->annotations());
 	_stationLayer->setShowChannelCodes(_ui.actionShowChannelCodes->isChecked());
 	_stationLayer->setShowIssues(_ui.actionShowStationIssues->isChecked());
+	_stationLayer->setShowUnbound(_ui.actionShowUnboundStations->isChecked());
 
 	connect(_stationLayer, SIGNAL(stationEntered(Seiscomp::DataModel::Station*)),
 	        this, SLOT(stationEntered(Seiscomp::DataModel::Station*)));
@@ -245,6 +247,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	connect(_ui.actionShowChannelCodes, SIGNAL(toggled(bool)), _stationLayer, SLOT(setShowChannelCodes(bool)));
 	connect(_ui.actionShowChannelCodes, SIGNAL(toggled(bool)), _mapWidget, SLOT(update()));
 	connect(_ui.actionShowStationIssues, SIGNAL(toggled(bool)), _stationLayer, SLOT(setShowIssues(bool)));
+	connect(_ui.actionShowUnboundStations, SIGNAL(toggled(bool)), _stationLayer, SLOT(setShowUnbound(bool)));
 	connect(_ui.actionSearchStation, SIGNAL(triggered()), this, SLOT(searchStation()));
 	connect(_ui.actionCenterMapOnEventUpdate, SIGNAL(toggled(bool)), this, SLOT(toggleCentering(bool)));
 	connect(_ui.actionResetView, SIGNAL(triggered()), this, SLOT(resetView()));

@@ -61,6 +61,7 @@ void Settings::accept(System::Application::SettingsLinker &linker) {
 	& cfg(eventLegendPosition, "eventLegendPosition")
 	& cfg(annotations, "annotations")
 	& cfg(annotationsWithChannels, "annotationsWithChannels")
+	& cfg(showUnboundStations, "showUnboundStations")
 	;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

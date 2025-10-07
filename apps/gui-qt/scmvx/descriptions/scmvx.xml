@@ -36,6 +36,11 @@
 				location/channel codes as NET.STA.LOC.CHA.
 				</description>
 			</parameter>
+			<parameter name="showUnboundStations" type="boolean" default="true">
+				<description>
+				Enable/disable drawing of stations which are not bound with global bindings.
+				</description>
+			</parameter>
 			<parameter name="mapLegendPosition" type="string" default="topleft" values="topleft,topright,bottomright,bottomleft">
 				<description>
 				The legend location for station symbols (network, QC, ground motion).

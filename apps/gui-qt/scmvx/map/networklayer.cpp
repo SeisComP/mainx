@@ -566,7 +566,9 @@ void NetworkLayer::setInventory(DataModel::Inventory *inv,
                                 const Core::Time *time) {
 	disposeSymbols();
 
-	if ( !inv ) return;
+	if ( !inv ) {
+		return;
+	}
 
 	size_t n, s;
 
@@ -582,12 +584,14 @@ void NetworkLayer::setInventory(DataModel::Inventory *inv,
 		for ( s = 0; s < net->stationCount(); ++s ) {
 			DataModel::Station *sta = net->station(s);
 
-			if ( refTime < sta->start() )
+			if ( refTime < sta->start() ) {
 				continue;
+			}
 
 			try {
-				if ( sta->end() <= refTime )
+				if ( sta->end() <= refTime ) {
 					continue;
+				}
 			}
 			catch ( ... ) {}
 
@@ -661,8 +665,9 @@ void NetworkLayer::setGMGradient(const NetworkLayerGradient &gradient) {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 const NetworkLayerGradient *NetworkLayer::qcGradient() const {
 	auto it = _qcGradients.find(_activeQCParameter);
-	if ( it == _qcGradients.end() )
+	if ( it == _qcGradients.end() ) {
 		return nullptr;
+	}
 	return &it.value();
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -702,7 +707,9 @@ void NetworkLayer::setStationsVisible(QSet<const DataModel::Station*> *set) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void NetworkLayer::setShowChannelCodes(bool enable) {
-	if ( _showChannelCodes == enable ) return;
+	if ( _showChannelCodes == enable ) {
+		return;
+	}
 	_showChannelCodes = enable;
 
 	updateAnnotations();
@@ -716,8 +723,28 @@ void NetworkLayer::setShowChannelCodes(bool enable) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void NetworkLayer::setShowIssues(bool enable) {
-	if ( _showIssues == enable ) return;
+	if ( _showIssues == enable ) {
+		return;
+	}
 	_showIssues = enable;
+	emit updateRequested();
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void NetworkLayer::setShowUnbound(bool enable) {
+	if ( _showUnbound == enable ) {
+		return;
+	}
+	_showUnbound = enable;
+
+	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
+		s->setVisible(_showUnbound || (s->state() != Settings::Unconfigured));
+	}
+
 	emit updateRequested();
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

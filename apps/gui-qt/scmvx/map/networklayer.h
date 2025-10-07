@@ -231,6 +231,13 @@ class NetworkLayer : public Gui::Map::Layer {
 		void setShowIssues(bool enable);
 
 		/**
+		 * @brief Sets if stations should be shown which do not have
+		 *        station bindings.
+		 * @param enable The visibility state
+		 */
+		void setShowUnbound(bool enable);
+
+		/**
 		 * @brief Updates the internal render state for each station symbol.
 		 */
 		void tick();
@@ -274,6 +281,7 @@ class NetworkLayer : public Gui::Map::Layer {
 
 		bool                                     _showChannelCodes;
 		bool                                     _showIssues;
+		bool                                     _showUnbound{true};
 		ColorMode                                _colorMode;
 		std::string                              _activeQCParameter;
 		Symbols                                  _stationSymbols;

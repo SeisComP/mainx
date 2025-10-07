@@ -55,28 +55,29 @@ struct Settings : System::Application::AbstractSettings {
 	using QCParameters = std::map<std::string, DataModel::WaveformQualityPtr>;
 
 	DEFINE_SMARTPOINTER(StationData);
-	struct StationData : Core::BaseObject {
-		StationData() = default;
+	class StationData : public Core::BaseObject {
+		public:
+			StationData() = default;
 
-		DataModel::Stream        *channel{nullptr};
-		const Util::KeyValues    *bindings{nullptr};
+			DataModel::Stream        *channel{nullptr};
+			const Util::KeyValues    *bindings{nullptr};
 
-		std::string               detecLocid;
-		std::string               detecStream;
+			std::string               detecLocid;
+			std::string               detecStream;
 
-		GroundMotionProcessorPtr  proc;
-		State                     state{OK};
+			GroundMotionProcessorPtr  proc;
+			State                     state{OK};
 
-		Core::Time                maximumAmplitudeTimeStamp;
-		double                    maximumAmplitude{-1};
+			Core::Time                maximumAmplitudeTimeStamp;
+			double                    maximumAmplitude{-1};
 
-		OPT(Core::Time)           triggerTime;
+			OPT(Core::Time)           triggerTime;
 
-		bool                      enabled;
-		QCParameters              qc;
+			bool                      enabled;
+			QCParameters              qc;
 
-		void                     *viewData{nullptr}; //! The map symbol
-		void                     *infoData{nullptr}; //! The info widget
+			void                     *viewData{nullptr}; //! The map symbol
+			void                     *infoData{nullptr}; //! The info widget
 	};
 
 	//! Maps a station to its configuration
@@ -102,6 +103,7 @@ struct Settings : System::Application::AbstractSettings {
 	std::string       eventLegendPosition;
 	bool              annotations{false};
 	bool              annotationsWithChannels{true};
+	bool              showUnboundStations{true};
 
 	struct {
 		void accept(System::Application::SettingsLinker &linker) {

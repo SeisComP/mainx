@@ -39,7 +39,6 @@ namespace {
 
 
 static QColor defaultColor(45, 105, 192);
-static QColor selectedColor(60, 139, 255);
 static QColor defaultFrameColor(64,64,64,128);
 //static QColor selectedFrameColor(60,139,255);
 static QColor selectedFrameColor(255,255,255);
@@ -198,7 +197,7 @@ void NetworkLayerSymbol::calculateMapPosition(const Seiscomp::Gui::Map::Canvas *
 void NetworkLayerSymbol::customDraw(const Gui::Map::Canvas *canvas, QPainter &painter) {
 	StationSymbol::customDraw(canvas, painter);
 
-	if ( _annotation ) {
+	if ( _annotation && _annotation->visible ) {
 		_annotation->updateLabelRect(painter, _position - QPoint(0, width() + painter.fontMetrics().height() / 2));
 	}
 }
@@ -543,7 +542,9 @@ void NetworkLayer::disposeSymbols() {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void NetworkLayer::setColorMode(ColorMode mode, bool force) {
-	if ( (_colorMode == mode) && !force ) return;
+	if ( (_colorMode == mode) && !force ) {
+		return;
+	}
 
 	_colorMode = mode;
 
@@ -690,13 +691,20 @@ void NetworkLayer::setStationsVisible(QSet<const DataModel::Station*> *set) {
 	if ( set ) {
 		foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
 			s->setDefaultVisibility();
-			if ( !set->contains(s->model()) )
+			if ( !_showUnbound && (s->state() == Settings::Unconfigured) ) {
 				s->setVisible(false);
+			}
+			if ( !set->contains(s->model()) ) {
+				s->setVisible(false);
+			}
 		}
 	}
 	else {
 		foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
 			s->setDefaultVisibility();
+			if ( !_showUnbound && (s->state() == Settings::Unconfigured) ) {
+				s->setVisible(false);
+			}
 		}
 	}
 }
@@ -745,7 +753,7 @@ void NetworkLayer::setShowUnbound(bool enable) {
 		s->setVisible(_showUnbound || (s->state() != Settings::Unconfigured));
 	}
 
-	emit updateRequested();
+	emit updateRequested(Position);
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -857,6 +865,8 @@ void NetworkLayer::calculateMapPosition(const Gui::Map::Canvas *canvas) {
 void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 	p.save();
 
+	bool showIssues = _showIssues && (_colorMode == Network);
+
 	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
 		if ( s->isClipped() || !s->isVisible() ) {
 			continue;
@@ -873,7 +883,7 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 
 			s->draw(canvas, p);
 
-			if ( _showIssues && (s->state() != Settings::OK) ) {
+			if ( showIssues && (s->state() != Settings::OK) ) {
 				QPoint lowerLeft = s->pos() + QPoint(0, -s->width() / 2);
 
 				static OPT(QPixmap) pmQuestion, pmWrench, pmUnlink, pmDatabase;
@@ -1026,6 +1036,14 @@ void NetworkLayer::updateColor(NetworkLayerSymbol *symbol) {
 	currentGradient = nullptr;
 
 	symbol->setState(Settings::OK);
+	auto it  = global.stationConfig.find(symbol->model());
+	if ( it == global.stationConfig.end() ) {
+		symbol->setState(Settings::Unknown);
+	}
+	else {
+		const Settings::StationData *data = it->second.get();
+		symbol->setState(data->state);
+	}
 
 	switch ( _colorMode ) {
 		case Default:
@@ -1046,16 +1064,6 @@ void NetworkLayer::updateColor(NetworkLayerSymbol *symbol) {
 			}
 
 			symbol->setColor(color);
-
-			Settings::StationConfigs::const_iterator it  = global.stationConfig.find(symbol->model());
-			if ( it == global.stationConfig.end() ) {
-				symbol->setState(Settings::Unknown);
-			}
-			else {
-				const Settings::StationData *data = it->second.get();
-				symbol->setState(data->state);
-			}
-
 			break;
 		}
 

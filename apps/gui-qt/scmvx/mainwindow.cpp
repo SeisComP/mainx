@@ -446,14 +446,18 @@ void MainWindow::switchTab(int index) {
 			w->layout()->addWidget(_mapWidget);
 		}
 
-		if ( w == _ui.tabNetwork )
+		if ( w == _ui.tabNetwork ) {
 			_stationLayer->setColorMode(NetworkLayer::Network);
-		else if ( w == _ui.tabGM )
+		}
+		else if ( w == _ui.tabGM ) {
 			_stationLayer->setColorMode(NetworkLayer::GroundMotion);
-		else if ( w == _ui.tabQC )
+		}
+		else if ( w == _ui.tabQC ) {
 			_stationLayer->setColorMode(NetworkLayer::QC);
-		else
+		}
+		else {
 			_stationLayer->setColorMode(NetworkLayer::Default);
+		}
 	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

@@ -891,14 +891,14 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 				switch ( s->state() ) {
 					case Settings::Unknown:
 						if ( !pmQuestion ) {
-							pmQuestion = Gui::pixmap(p.fontMetrics(), "question", QColor(Qt::black), p.device()->devicePixelRatioF());
+							pmQuestion = Gui::pixmap(p.fontMetrics(), "question_mark", QColor(Qt::black), p.device()->devicePixelRatioF());
 						}
 						drawWarningSymbol(p, lowerLeft, *pmQuestion);
 						break;
 
 					case Settings::Unconfigured:
 						if ( !pmWrench ) {
-							pmWrench = Gui::pixmap(p.fontMetrics(), "wrench", QColor(Qt::black), p.device()->devicePixelRatioF());
+							pmWrench = Gui::pixmap(p.fontMetrics(), "settings", QColor(Qt::black), p.device()->devicePixelRatioF());
 						}
 						drawWarningSymbol(p, lowerLeft, *pmWrench);
 						break;

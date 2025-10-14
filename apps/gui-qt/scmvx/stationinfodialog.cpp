@@ -141,17 +141,17 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 				break;
 
 			case Settings::Unknown:
-				icon = Gui::icon("question");
+				icon = Gui::icon("question_mark");
 				_ui.labelIssueText->setText(tr("The station is unknown to the system."));
 				break;
 
 			case Settings::Unconfigured:
-				icon = Gui::icon("wrench", QColor(255,128,0));
+				icon = Gui::icon("settings", QColor(255,128,0));
 				_ui.labelIssueText->setText(tr("The station does not have global bindings."));
 				break;
 
 			case Settings::NoPrimaryStream:
-				icon = Gui::icon("wrench", QColor(255,128,0));
+				icon = Gui::icon("settings", QColor(255,128,0));
 				_ui.labelIssueText->setText(tr("The parameter 'detecStream' is not configured by global bindings."));
 				break;
 

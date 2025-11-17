@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<seiscomp>
+	<module name="scmagimport" category="Utilities" standalone="true">
+		<description>
+		Import a foreign magnitude from a SCML event file into SeisComP.
+		</description>
+		<command-line>
+			<synopsis>
+				scmagimport [OPTIONS] source
+			</synopsis>
+			<group name="Generic">
+				<optionReference>generic#help</optionReference>
+				<optionReference>generic#version</optionReference>
+				<optionReference>generic#config-file</optionReference>
+				<optionReference>generic#plugins</optionReference>
+				<optionReference>generic#daemon</optionReference>
+			</group>
+
+			<group name="Verbosity">
+				<optionReference>verbosity#verbosity</optionReference>
+				<optionReference>verbosity#v</optionReference>
+				<optionReference>verbosity#quiet</optionReference>
+				<optionReference>verbosity#print-component</optionReference>
+				<optionReference>verbosity#print-context</optionReference>
+				<optionReference>verbosity#component</optionReference>
+				<optionReference>verbosity#syslog</optionReference>
+				<optionReference>verbosity#lockfile</optionReference>
+				<optionReference>verbosity#console</optionReference>
+				<optionReference>verbosity#debug</optionReference>
+				<optionReference>verbosity#trace</optionReference>
+				<optionReference>verbosity#log-file</optionReference>
+			</group>
+
+			<group name="Messaging">
+				<optionReference>messaging#user</optionReference>
+				<optionReference>messaging#host</optionReference>
+				<optionReference>messaging#timeout</optionReference>
+				<optionReference>messaging#primary-group</optionReference>
+				<optionReference>messaging#subscribe-group</optionReference>
+				<optionReference>messaging#encoding</optionReference>
+				<optionReference>messaging#start-stop-msg</optionReference>
+			</group>
+
+			<group name="Database">
+				<optionReference>database#db-driver-list</optionReference>
+				<optionReference>database#database</optionReference>
+				<optionReference>database#config-module</optionReference>
+				<optionReference>database#inventory-db</optionReference>
+				<option flag="" long-flag="db-disable" argument="" publicID="database#db-disable">
+					<description>Do not use the database at all.</description>
+				</option>
+			</group>
+
+			<group name="Processing">
+				<option flag="i" long-flag="input" argument="arg" type="string">
+					<description>
+					SeisComP XML file containing an event with a preferred origin and
+					magnitude to import. Use '-' to read from stdin instead of file.
+					</description>
+				</option>
+				<option flag="a" long-flag="associate-api" argument="arg" type="string" default="http://localhost:18182/api/1/try-to-associate">
+					<description>
+					scevent API URL for event association.
+					</description>
+				</option>
+				<option flag="" long-flag="mag-type" argument="arg" type="string" default="M(USGS)">
+					<description>
+					Magnitude type to use for the imported magnitude.
+					</description>
+				</option>
+			</group>
+		</command-line>
+	</module>
+</seiscomp>

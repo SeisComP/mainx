@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<seiscomp>
+	<module name="scmagcopy" category="Utilities">
+		<description>
+		SeisComP module copying magnitudes to new origin references.
+		</description>
+		<configuration>
+			<parameter name="bufferSize" type="int" unit="s" default="14400">
+				<description>
+				Timespan in seconds to buffer event, origin and magnitude
+				objects received via messaging. Object not found in the
+				in-memory buffer will be read from the database.
+				</description>
+			</parameter>
+			<parameter name="magType" type="string" default="M(USGS)">
+				<description>
+				Magnitude type to copy if present.
+				</description>
+			</parameter>
+		</configuration>
+		<command-line>
+			<synopsis>
+				scmagcopy [OPTIONS]
+			</synopsis>
+			<group name="Generic">
+				<optionReference>generic#help</optionReference>
+				<optionReference>generic#version</optionReference>
+				<optionReference>generic#config-file</optionReference>
+				<optionReference>generic#plugins</optionReference>
+				<optionReference>generic#daemon</optionReference>
+			</group>
+
+			<group name="Verbosity">
+				<optionReference>verbosity#verbosity</optionReference>
+				<optionReference>verbosity#v</optionReference>
+				<optionReference>verbosity#quiet</optionReference>
+				<optionReference>verbosity#print-component</optionReference>
+				<optionReference>verbosity#print-context</optionReference>
+				<optionReference>verbosity#component</optionReference>
+				<optionReference>verbosity#syslog</optionReference>
+				<optionReference>verbosity#lockfile</optionReference>
+				<optionReference>verbosity#console</optionReference>
+				<optionReference>verbosity#debug</optionReference>
+				<optionReference>verbosity#trace</optionReference>
+				<optionReference>verbosity#log-file</optionReference>
+			</group>
+
+			<group name="Messaging">
+				<optionReference>messaging#user</optionReference>
+				<optionReference>messaging#host</optionReference>
+				<optionReference>messaging#timeout</optionReference>
+				<optionReference>messaging#primary-group</optionReference>
+				<optionReference>messaging#subscribe-group</optionReference>
+				<optionReference>messaging#encoding</optionReference>
+				<optionReference>messaging#start-stop-msg</optionReference>
+			</group>
+
+			<group name="Database">
+				<optionReference>database#db-driver-list</optionReference>
+				<optionReference>database#database</optionReference>
+				<optionReference>database#config-module</optionReference>
+				<optionReference>database#inventory-db</optionReference>
+				<option flag="" long-flag="db-disable" argument="" publicID="database#db-disable">
+					<description>Do not use the database at all.</description>
+				</option>
+			</group>
+
+			<group name="Processing">
+				<option flag="" long-flag="mag-type" argument="arg" type="string" default="M(USGS)">
+					<description>
+					Magnitude type to copy if present.
+					</description>
+				</option>
+			</group>
+		</command-line>
+	</module>
+</seiscomp>

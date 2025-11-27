@@ -30,8 +30,7 @@
 #include <QTimer>
 
 
-namespace Seiscomp {
-namespace MapViewX {
+namespace Seiscomp::MapViewX {
 
 
 class EventHeatLayer : public Gui::Map::Layer {
@@ -87,7 +86,6 @@ class EventHeatLayer : public Gui::Map::Layer {
 };
 
 
-}
 }
 
 

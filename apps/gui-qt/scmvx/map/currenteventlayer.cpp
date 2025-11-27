@@ -34,8 +34,7 @@ using namespace Seiscomp::DataModel;
 using namespace Seiscomp::Gui;
 
 
-namespace Seiscomp {
-namespace MapViewX {
+namespace Seiscomp::MapViewX {
 
 namespace {
 
@@ -119,21 +118,24 @@ CurrentEventLayer::CurrentEventLayer(QObject* parent)
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void CurrentEventLayer::setEvent(Event *evt) {
 	_isValid = evt != nullptr;
-	if ( !_isValid )
+	if ( !_isValid ) {
 		return;
+	}
 
-	Magnitude *mag = Magnitude::Find(evt->preferredMagnitudeID());
-	if ( mag )
+	auto *mag = Magnitude::Find(evt->preferredMagnitudeID());
+	if ( mag ) {
 		_magnitude = mag->magnitude().value();
-	else
+	}
+	else {
 		_magnitude = Core::None;
+	}
 
 	if ( !mag && !evt->preferredMagnitudeID().empty() ) {
 		SEISCOMP_WARNING("Preferred magnitude not found: %s",
 		                 evt->preferredMagnitudeID().c_str());
 	}
 
-	Origin *org = Origin::Find(evt->preferredOriginID());
+	auto *org = Origin::Find(evt->preferredOriginID());
 	if ( !org ) {
 		_isValid = false;
 		return;
@@ -149,7 +151,9 @@ void CurrentEventLayer::setEvent(Event *evt) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void CurrentEventLayer::draw(const Map::Canvas *canvas, QPainter &p) {
-	if ( !_isValid ) return;
+	if ( !_isValid ) {
+		return;
+	}
 
 	p.save();
 
@@ -221,4 +225,4 @@ bool CurrentEventLayer::isInside(const QMouseEvent *event, const QPointF &geoPos
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 }
-}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

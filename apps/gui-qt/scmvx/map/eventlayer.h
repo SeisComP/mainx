@@ -31,8 +31,7 @@
 #include <QMap>
 
 
-namespace Seiscomp {
-namespace MapViewX {
+namespace Seiscomp::MapViewX {
 
 
 class EventLayer : public Gui::EventLayer {
@@ -110,6 +109,6 @@ class EventLayer : public Gui::EventLayer {
 
 
 }
-}
+
 
 #endif

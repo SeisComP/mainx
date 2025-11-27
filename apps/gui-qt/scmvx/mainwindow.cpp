@@ -58,8 +58,7 @@ namespace MapViewX {
 
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-void MainWindow::Event::setEvent(DataModel::Event *evt,
-                                 ObjectCache &cache) {
+void MainWindow::Event::setEvent(DataModel::Event *evt, ObjectCache &cache) {
 	event = evt;
 	preferredOrigin = cache.get<dm::Origin>(evt->preferredOriginID());
 	preferredMagnitude = cache.get<dm::Magnitude>(evt->preferredMagnitudeID());
@@ -109,7 +108,6 @@ QPointF MainWindow::Event::location() const {
 MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 : Gui::MainWindow(parent, f)
 , _currentTraces(nullptr) {
-	setWindowIcon(QIcon(QPixmap(":/gempa/gui/icons/gempalogo.png")));
 	SCScheme.colors.legend.background.setAlpha(192);
 
 	qRegisterMetaType<string>("std::string");
@@ -585,22 +583,25 @@ void MainWindow::addObject(const QString &, DataModel::Object *obj) {
 
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-void MainWindow::eventAdded(DataModel::Event *evtObj, bool) {
+void MainWindow::eventAdded(DataModel::Event *obj, bool) {
 	try {
-		if ( SCApp->isAgencyIDBlocked(evtObj->creationInfo().agencyID()) )
+		if ( SCApp->isAgencyIDBlocked(obj->creationInfo().agencyID()) ) {
 			return;
+		}
 	}
 	catch ( ... ) {}
 
 	if ( _latestEvent ) {
 		Event evt;
-		evt.setEvent(evtObj, _cache);
-		if ( _latestEvent.isMoreRecent(evt) )
+		evt.setEvent(obj, _cache);
+		if ( _latestEvent.isMoreRecent(evt) ) {
 			return;
+		}
 		_latestEvent = evt;
 	}
-	else
-		_latestEvent.setEvent(evtObj, _cache);
+	else {
+		_latestEvent.setEvent(obj, _cache);
+	}
 
 	updateCurrentEvent();
 }
@@ -682,8 +683,9 @@ void MainWindow::updateCurrentEvent() {
 	if ( _latestEvent ) {
 		_eventLayer->setCurrentEvent(_latestEvent.event.get());
 		_currentEventLayer->setEvent(_latestEvent.event.get());
-		if ( global.centerOrigins )
+		if ( global.centerOrigins ) {
 			_mapWidget->canvas().setMapCenter(_latestEvent.location());
+		}
 	}
 	else {
 		_eventLayer->setCurrentEvent(nullptr);

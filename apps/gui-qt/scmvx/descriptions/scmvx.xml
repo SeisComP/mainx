@@ -8,9 +8,8 @@
 		<configuration>
 			<parameter name="displaymode" type="string" values="groundmotion,qualitycontrol">
 				<description>
-				Set one of the available display modes used during startup:
-				groundmotion or qualitycontrol. When empty, the Network tab is
-				shown.
+				Set one of the available display modes used during startup. When
+				empty, the Network tab is shown.
 				</description>
 			</parameter>
 			<parameter name="readEventsNotOlderThan" type="double" default="86400" unit="s">
@@ -32,18 +31,20 @@
 			</parameter>
 			<parameter name="annotationsWithChannels" type="boolean" default="true">
 				<description>
-				Enable/disable drawing of station annotations with
-				location/channel codes as NET.STA.LOC.CHA.
+				Show full stream codes with station annotations including
+				location and channel codes as NET.STA.LOC.CHA.
 				</description>
 			</parameter>
 			<parameter name="showUnboundStations" type="boolean" default="true">
 				<description>
-				Enable/disable drawing of stations which are not bound with global bindings.
+				Enable/disable drawing of stations which are not bound with
+				global bindings.
 				</description>
 			</parameter>
 			<parameter name="mapLegendPosition" type="string" default="topleft" values="topleft,topright,bottomright,bottomleft">
 				<description>
-				The legend location for station symbols (network, QC, ground motion).
+				The legend location for station symbols (network, QC, ground
+				motion).
 				</description>
 			</parameter>
 			<parameter name="eventLegendPosition" type="string" default="bottomleft" values="topleft,topright,bottomright,bottomleft">
@@ -53,15 +54,21 @@
 			</parameter>
 			<group name="stations">
 				<parameter name="amplitudeTimeSpan" type="double" default="10" unit="s">
-					<description></description>
+					<description>
+					Time span for forming the maximum value as envelope to the
+					traces in the trace window for a station.
+					</description>
 				</parameter>
 				<parameter name="groundMotionRecordLifeSpan" type="double" default="600" unit="s">
 					<description>
-					Time to keep waveform data in memory
+					Time to keep waveform data in memory.
 					</description>
 				</parameter>
 				<parameter name="triggerTimeout" type="double" default="60" unit="s">
-					<description></description>
+					<description>
+					Time span to show phase picks of a station by a blinking
+					triangle.
+					</description>
 				</parameter>
 				<parameter name="groundMotionFilter" type="string" default="ITAPER(60)>>BW_HP(4,0.5)">
 					<description>

@@ -36,8 +36,7 @@
 #endif
 
 
-namespace Seiscomp {
-namespace MapViewX {
+namespace Seiscomp::MapViewX {
 
 
 class NetworkLayer;
@@ -297,7 +296,6 @@ class NetworkLayer : public Gui::Map::Layer {
 };
 
 
-}
 }
 
 

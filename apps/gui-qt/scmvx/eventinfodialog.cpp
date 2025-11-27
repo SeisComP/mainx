@@ -44,6 +44,8 @@ EventInfoDialog::EventInfoDialog(QWidget *parent, Qt::WindowFlags f)
 	vl->addWidget(_inspector);
 
 	_ui.frame->setLayout(vl);
+
+	connect(_ui.btnShowDetails, &QPushButton::clicked, this, &EventInfoDialog::showDetails);
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

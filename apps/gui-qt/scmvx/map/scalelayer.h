@@ -25,8 +25,7 @@
 #include <seiscomp/gui/map/layer.h>
 
 
-namespace Seiscomp {
-namespace MapViewX {
+namespace Seiscomp::MapViewX {
 
 
 class ScaleLayer : public Gui::Map::Layer {
@@ -44,7 +43,6 @@ class ScaleLayer : public Gui::Map::Layer {
 };
 
 
-}
 }
 
 

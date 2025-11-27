@@ -27,8 +27,7 @@
 #include <seiscomp/gui/map/mapsymbol.h>
 
 
-namespace Seiscomp {
-namespace MapViewX {
+namespace Seiscomp::MapViewX {
 
 
 class StationSymbol : public Gui::Map::Symbol {
@@ -98,7 +97,6 @@ inline int StationSymbol::frameSize() const {
 }
 
 
-}
 }
 
 

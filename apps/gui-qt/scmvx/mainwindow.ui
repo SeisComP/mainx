@@ -355,9 +355,6 @@
    </property>
   </action>
  </widget>
- <resources>
-  <include location="../../../../base/common/libs/seiscomp/gui/datamodel/icons.qrc"/>
-  <include location="resources.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

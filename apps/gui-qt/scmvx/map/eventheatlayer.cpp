@@ -25,13 +25,10 @@
 #include <seiscomp/gui/core/compat.h>
 #include <seiscomp/gui/map/canvas.h>
 
-#include <iostream>
-
 #include <QApplication>
 
 
-namespace Seiscomp {
-namespace MapViewX {
+namespace Seiscomp::MapViewX {
 
 namespace {
 
@@ -498,4 +495,4 @@ void EventHeatLayer::updateCanvas() {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 }
-}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

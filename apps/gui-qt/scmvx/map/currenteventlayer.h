@@ -22,13 +22,13 @@
 #define SEISCOMP_MAPVIEWX_LAYERS_CURRENTEVENTLAYER_H
 
 
+#include "seiscomp/datamodel/event.h"
 #ifndef Q_MOC_RUN
 #include <seiscomp/gui/map/layer.h>
 #endif
 
 
-namespace Seiscomp {
-namespace MapViewX {
+namespace Seiscomp::MapViewX {
 
 
 class CurrentEventLayer : public Gui::Map::Layer {
@@ -79,6 +79,6 @@ class CurrentEventLayer : public Gui::Map::Layer {
 
 
 }
-}
+
 
 #endif

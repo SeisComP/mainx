@@ -41,10 +41,9 @@
 				global bindings.
 				</description>
 			</parameter>
-			<parameter name="mapLegendPosition" type="string" default="topleft" values="topleft,topright,bottomright,bottomleft">
+			<parameter name="mapLegendPosition" type="string" default="topright" values="topleft,topright,bottomright,bottomleft">
 				<description>
-				The legend location for station symbols (network, QC, ground
-				motion).
+				The legend location for station symbols (network, QC, ground motion).
 				</description>
 			</parameter>
 			<parameter name="eventLegendPosition" type="string" default="bottomleft" values="topleft,topright,bottomright,bottomleft">

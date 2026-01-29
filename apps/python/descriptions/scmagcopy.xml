@@ -2,16 +2,9 @@
 <seiscomp>
 	<module name="scmagcopy" category="Utilities">
 		<description>
-		SeisComP module copying magnitudes to new origin references.
+		Copies magnitudes to new origins referenced by events.
 		</description>
 		<configuration>
-			<parameter name="bufferSize" type="int" unit="s" default="14400">
-				<description>
-				Timespan in seconds to buffer event, origin and magnitude
-				objects received via messaging. Object not found in the
-				in-memory buffer will be read from the database.
-				</description>
-			</parameter>
 			<parameter name="magType" type="string" default="M(USGS)">
 				<description>
 				Magnitude type to copy if present.

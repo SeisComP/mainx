@@ -5,14 +5,14 @@ scmagcopy - SeisComP module copying magnitudes to new origin references.
 
 Processing steps performed:
 
- - Listen for new origins associated to an event (OriginReference).
- - Check if the referenced origin already contains a magnitude of the configured
-   type and stop here if this is the case.
- - Iterate through all origins and magnitudes of the corresponding event.
- - Copy the latest magnitude of the configured type to the origin referenced by
-   the new origin reference just received.
- - Send the magnitude copy to the messaging system.
- - Let scevent decide whether the new magnitude becomes preferred.
+ 1. Listen for new origins associated to an event (OriginReference).
+ 2. Check if the referenced origin already contains a magnitude of the configured
+    type and stop here if this is the case.
+ 3. Iterate through all origins and magnitudes of the corresponding event.
+ 4. Copy the latest magnitude of the configured type to the origin referenced by
+    the new origin reference just received.
+ 5. Send the magnitude copy to the messaging system.
+ 6. Let scevent decide whether the new magnitude becomes preferred.
 
 Usage: scmagcopy [OPTIONS]
 """
@@ -32,8 +32,6 @@ class MagnitudeCopy(client.Application):
         self.addMessagingSubscription("MAGNITUDE")
         self.setPrimaryMessagingGroup("MAGNITUDE")
 
-        self.bufferSize = 4 * 3600
-        self.poCache = datamodel.PublicObjectTimeSpanBuffer()
         self.magType = "M(USGS)"
 
     def createCommandLineDescription(self):
@@ -61,11 +59,6 @@ class MagnitudeCopy(client.Application):
             return False
 
         try:
-            self.bufferSize = self.configGetInt("bufferSize")
-        except RuntimeError:
-            pass
-
-        try:
             self.magType = self.configGetString("magType")
         except RuntimeError:
             pass
@@ -78,15 +71,6 @@ class MagnitudeCopy(client.Application):
 
         # Parameters inherited from base class
         super().printUsage()
-
-    def init(self):
-        if not super().init():
-            return False
-
-        self.poCache.setTimeSpan(core.TimeSpan(self.bufferSize))
-        self.poCache.setDatabaseArchive(self.query())
-
-        return True
 
     @staticmethod
     def createdAfter(o1, o2):
@@ -101,6 +85,35 @@ class MagnitudeCopy(client.Application):
             creationTime2 = None
 
         return creationTime2 and (not creationTime1 or creationTime2 > creationTime1)
+
+    @staticmethod
+    def formatMag(mag):
+        return f"{mag.type()} {mag.magnitude().value()} ({mag.publicID()})"
+
+    @staticmethod
+    def ellipsisJoin(s1, s2, len_max):
+        len_s1 = len(s1)
+        len_remain = len_max - len_s1
+
+        # first and second string fit into len_max
+        if len_remain >= len(s2):
+            return s1 + s2
+
+        ellipsis = "..."
+        len_ellipsis = len(ellipsis)
+
+        # no space for ellipsis: truncate first string at the back
+        if len_max <= len_ellipsis:
+            return s1[:len_max]
+
+        # first string exceeds max len: truncate first string at the front and
+        # append ellipsis
+        if len_remain <= len_ellipsis:
+            return s1[: (len_max - len_ellipsis)] + ellipsis
+
+        # trunctate second string at the front
+        len_remain -= len_ellipsis
+        return s1 + ellipsis + s2[-len_remain:]
 
     def copyMagnitude(self, magnitude, origin):
         # collect notifier
@@ -118,7 +131,7 @@ class MagnitudeCopy(client.Application):
         ci.setAgencyID(self.agencyID())
         ci.setAuthor(self.author())
         ci.setCreationTime(now)
-        ci.setVersion(f"clone of {magnitude.publicID()}")
+        ci.setVersion(self.ellipsisJoin("clone of ", magnitude.publicID(), 64))
         magCopy.setCreationInfo(ci)
 
         # add magnitude to origin
@@ -130,22 +143,27 @@ class MagnitudeCopy(client.Application):
         self.connection().send(msg)
 
         logging.info(
-            f"Added magnitude {magCopy.publicID()} as copy of {magnitude.publicID()} "
-            f"to origin {origin.publicID()}"
+            f"Added magnitude {self.formatMag(magCopy)} as copy of "
+            f"{magnitude.publicID()} to origin {origin.publicID()}"
         )
+
+    def loadOriginWithMagnitudes(self, originID):
+        origin = self.query().getObject(datamodel.Origin.TypeInfo(), originID)
+        origin = datamodel.Origin.Cast(origin)
+        if not origin:
+            raise ValueError(f"Could not load origin {originID}")
+
+        # load magnitudes of origin
+        magCount = self.query().loadMagnitudes(origin)
+        logging.debug(f"Loaded {magCount} magnitude(s) of {originID}")
+
+        return origin
 
     def processOriginReference(self, eventID, originReference):
         # load origin for reference
         originID = originReference.originID()
         logging.info(f"Processing origin reference {originID} of event {eventID}")
-        origin = self.poCache.get(datamodel.Origin, originID)
-
-        if not origin:
-            logging.error(f"Could not load origin {originID}")
-            return
-
-        if not origin.magnitudeCount():
-            self.query().loadMagnitudes(origin)
+        origin = self.loadOriginWithMagnitudes(originID)
 
         # check if origin already contains magnitude of desired type
         for iMag in range(origin.magnitudeCount()):
@@ -163,45 +181,50 @@ class MagnitudeCopy(client.Application):
         )
 
         # load event
-        event = self.poCache.get(datamodel.Event, eventID)
+        event = self.query().getObject(datamodel.Event.TypeInfo(), eventID)
+        event = datamodel.Event.Cast(event)
         if not event:
-            logging.error(f"Could not load event {eventID}")
-            return
+            raise ValueError(f"Could not load event {eventID}")
 
-        if not event.originReferenceCount():
-            self.query().loadOriginReferences(event)
-
+        orefCount = self.query().loadOriginReferences(event)
         logging.debug(
-            f"Searching magnitude in {event.originReferenceCount()} origins of event"
+            f"Searching magnitude of type {self.magType} in {orefCount} origins of "
+            f"event {eventID}"
         )
 
-        # search for latest magnitude of given type in all referenced origins
+        # Search for latest magnitude of given type in all referenced origins. Store
+        # pointer to origin containing latest magnitude to prevent NPE in clone()
+        # of copyMagnitude.
         latestMag = None
+        latestMagOrigin = None
         for iOriginRef in range(event.originReferenceCount()):
             templateOriginID = event.originReference(iOriginRef).originID()
-            print(f"testing oref: {templateOriginID}")
             if templateOriginID == originID:
                 continue
 
-            templateOrigin = self.poCache.get(datamodel.Origin, templateOriginID)
-            if not templateOrigin:
-                logging.warning(f"Could not load origin {templateOriginID}")
+            try:
+                templateOrigin = self.loadOriginWithMagnitudes(templateOriginID)
+            except ValueError as e:
+                logging.warning(e)
                 continue
-
-            if not templateOrigin.magnitudeCount():
-                self.query().loadMagnitudes(templateOrigin)
-
-            print(f"templateOrigin.magnitudeCount(): {templateOrigin.magnitudeCount()}")
 
             for iMag in range(templateOrigin.magnitudeCount()):
                 mag = templateOrigin.magnitude(iMag)
-                print(f"  mag: {mag.type()}")
                 if mag.type() == self.magType and (
                     not latestMag or self.createdAfter(latestMag, mag)
                 ):
+                    if latestMag:
+                        logging.debug(
+                            f"Found newer template magnitude: {self.formatMag(mag)}"
+                        )
+                    else:
+                        logging.debug(
+                            f"Found first template magnitude: {self.formatMag(mag)}"
+                        )
                     latestMag = mag
+                    latestMagOrigin = templateOrigin
 
-        if latestMag:
+        if latestMag and latestMagOrigin:
             self.copyMagnitude(latestMag, origin)
         else:
             logging.info(
@@ -210,32 +233,18 @@ class MagnitudeCopy(client.Application):
             )
 
     def addObject(self, parentID, scobject):  # pylint: disable=W0237
-        # cache event objects
-        event = datamodel.Event.Cast(scobject)
-        if event:
-            logging.debug(f"Caching event {event.publicID()}")
-            self.poCache.feed(event)
-            return
-
-        # cache origin objects
-        origin = datamodel.Origin.Cast(scobject)
-        if origin:
-            logging.debug(f"Caching origin {origin.publicID()}")
-            self.poCache.feed(origin)
-            return
-
-        # cache magnitude objects
-        mag = datamodel.Magnitude.Cast(scobject)
-        if mag:
-            logging.debug(f"Caching magnitude {mag.publicID()}")
-            self.poCache.feed(mag)
-            return
-
         # process origin references added to events
         originReference = datamodel.OriginReference.Cast(scobject)
-        if originReference:
-            logging.debug(f"Caching originReference {originReference.originID()}")
+        if not originReference:
+            return
+
+        try:
             self.processOriginReference(parentID, originReference)
+        except Exception as e:
+            logging.error(
+                f"Error processing origin reference {originReference.originID()} "
+                f"of event {parentID}: {e}"
+            )
 
 
 def main():

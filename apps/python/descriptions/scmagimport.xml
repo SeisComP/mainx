@@ -2,7 +2,7 @@
 <seiscomp>
 	<module name="scmagimport" category="Utilities" standalone="true">
 		<description>
-		Import a foreign magnitude from a SCML event file into SeisComP.
+		Imports a foreign magnitude from a SCML event file into SeisComP.
 		</description>
 		<command-line>
 			<synopsis>
@@ -52,7 +52,7 @@
 			</group>
 
 			<group name="Processing">
-				<option flag="i" long-flag="input" argument="arg" type="string">
+				<option flag="i" long-flag="input" argument="arg" type="file">
 					<description>
 					SeisComP XML file containing an event with a preferred origin and
 					magnitude to import. Use '-' to read from stdin instead of file.

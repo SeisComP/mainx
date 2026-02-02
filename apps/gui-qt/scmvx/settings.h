@@ -96,7 +96,7 @@ struct Settings : System::Application::AbstractSettings {
 	Core::TimeSpan    triggerTimeout{60, 0};
 	bool              tickToggleState{false};
 	bool              centerOrigins{false};
-	std::string       displayMode;
+	std::string       displayMode{"network"};
 	bool              showLatestEvent{true};
 	bool              showLegend{false};
 	std::string       stationLegendPosition;

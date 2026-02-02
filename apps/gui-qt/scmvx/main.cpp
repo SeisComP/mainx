@@ -136,6 +136,7 @@ bool Application::init() {
 
 	if ( !global.displayMode.empty()
 	   && global.displayMode != "groundmotion"
+	   && global.displayMode != "network"
 	   && global.displayMode != "qualitycontrol" ) {
 		SEISCOMP_ERROR("Invalid displaymode: %s", global.displayMode.c_str());
 		return false;

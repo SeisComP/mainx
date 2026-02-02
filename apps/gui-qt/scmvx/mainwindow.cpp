@@ -396,18 +396,22 @@ void MainWindow::leaveFullScreen() {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void MainWindow::resetView() {
-	if ( !global.initialRegion.isNull() )
+	if ( !global.initialRegion.isNull() ) {
 		_mapWidget->canvas().displayRect(global.initialRegion);
-	else
+	}
+	else {
 		_mapWidget->canvas().displayRect(QRectF(-180, -90, 360, 180));
+	}
 
 	if ( global.displayMode == "groundmotion" ) {
 		_ui.tabWidget->setCurrentWidget(_ui.tabGM);
 	}
-	else if ( global.displayMode == "qualitycontrol" )
+	else if ( global.displayMode == "qualitycontrol" ) {
 		_ui.tabWidget->setCurrentWidget(_ui.tabQC);
-	else
+	}
+	else {
 		_ui.tabWidget->setCurrentWidget(_ui.tabNetwork);
+	}
 
 	bool showLegend = SCScheme.map.showLegends;
 

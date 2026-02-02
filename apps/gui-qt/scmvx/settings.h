@@ -97,7 +97,7 @@ struct Settings : System::Application::AbstractSettings {
 	int               triggerFrameSize{3};
 	bool              tickToggleState{false};
 	bool              centerOrigins{false};
-	std::string       displayMode;
+	std::string       displayMode{"network"};
 	bool              showLatestEvent{true};
 	bool              showLegend{false};
 	std::string       stationLegendPosition;

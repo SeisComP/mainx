@@ -6,10 +6,11 @@
 		configuration of stations are indicated.
 		</description>
 		<configuration>
-			<parameter name="displaymode" type="string" values="groundmotion,qualitycontrol">
+			<parameter name="displaymode" type="string" values="groundmotion,network,qualitycontrol" default="network">
 				<description>
-				Set one of the available display modes used during startup. When
-				empty, the Network tab is shown.
+				Set one of the available display modes used during startup for
+				defining which tab is shown. When empty, the Network tab is
+				shown.
 				</description>
 			</parameter>
 			<parameter name="readEventsNotOlderThan" type="double" default="86400" unit="s">

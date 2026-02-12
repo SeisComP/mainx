@@ -93,7 +93,8 @@ struct Settings : System::Application::AbstractSettings {
 	Core::TimeSpan    eventTimeSpan{86400, 0};
 	Core::TimeSpan    maximumAmplitudeTimeSpan{10, 0};
 	Core::TimeSpan    ringBuffer{60 * 10, 0};
-	Core::TimeSpan    triggerTimeout{60, 0};
+	Core::TimeSpan    triggerTimeout{900, 0};
+	int               triggerFrameSize{3};
 	bool              tickToggleState{false};
 	bool              centerOrigins{false};
 	std::string       displayMode{"network"};

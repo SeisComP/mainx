@@ -29,7 +29,6 @@
 #include <map>
 
 #include "settings.h"
-#include "processor.h"
 #include "mainwindow.h"
 
 
@@ -51,9 +50,7 @@ class Application : public Gui::Kicker<MainWindow> {
 		bool validateParameters() override;
 		bool init() override;
 		void printUsage() const override;
-		void setupUi(MainWindow *mw) override {
-			_mainWindow = mw;
-		}
+		void setupUi(MainWindow *mw) override;
 
 
 	private slots:

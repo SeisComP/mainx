@@ -122,7 +122,26 @@ void Application::printUsage() const {
 	          << "  " << name() << " -d localhost -i events.xml --debug"
 	          << std::endl << std::endl;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void Application::setupUi(MainWindow *mw) {
+	_mainWindow = mw;
+	if ( global.triggerTimeout > Core::TimeSpan(0, 0) && query() ) {
+		auto now = Core::Time::UTC();
+		auto it = query()->getPicks(now - global.triggerTimeout, now);
+		QString epID = DataModel::EventParameters::ClassName();
+		for ( ; it.get(); ++it ) {
+			auto pick = DataModel::Pick::Cast(it.get());
+			if ( pick ) {
+				_mainWindow->addObject(epID, pick);
+			}
+		}
+	}
+}
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 

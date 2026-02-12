@@ -77,10 +77,10 @@ class EventLayer : public Gui::EventLayer {
 	//  Slots
 	// ----------------------------------------------------------------------
 	public slots:
-		void clear();
-		void addEvent(Seiscomp::DataModel::Event*,bool);
-		void updateEvent(Seiscomp::DataModel::Event*);
-		void removeEvent(Seiscomp::DataModel::Event*);
+		void clear() override;
+		void addEvent(Seiscomp::DataModel::Event*,bool) override;
+		void updateEvent(Seiscomp::DataModel::Event*) override;
+		void removeEvent(Seiscomp::DataModel::Event*) override;
 		void tick();
 
 

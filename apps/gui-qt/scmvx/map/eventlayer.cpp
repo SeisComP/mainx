@@ -21,7 +21,12 @@
 #define SEISCOMP_COMPONENT MapView
 #include <seiscomp/logging/log.h>
 #include <seiscomp/datamodel/event.h>
+#include <seiscomp/datamodel/focalmechanism.h>
+#include <seiscomp/datamodel/momenttensor.h>
 #include <seiscomp/datamodel/magnitude.h>
+#include <seiscomp/math/conversions.h>
+#include <seiscomp/math/tensor.h>
+#include <seiscomp/gui/core/application.h>
 #include <seiscomp/gui/datamodel/eventlayer.h>
 #include <seiscomp/gui/datamodel/ttdecorator.h>
 
@@ -41,17 +46,12 @@ namespace {
 
 
 void updateSymbol(DataModel::PublicObjectCache *cache,
-                  Map::Canvas *canvas, OriginSymbol *symbol,
-                  Event *event, Origin *org) {
+                  Map::Canvas *canvas, Gui::EventLayer::EventSymbol &symbol,
+                  Event *event, Origin *org, FocalMechanism *fm) {
 	double latitude = org->latitude();
 	double longitude = org->longitude();
 	double depth = 10;
 	double M = 0;
-
-	try {
-		depth = org->depth();
-	}
-	catch ( ... ) {}
 
 	MagnitudePtr mag = cache ? cache->get<Magnitude>(event->preferredMagnitudeID()) : Magnitude::Find(event->preferredMagnitudeID());
 	if ( mag ) {
@@ -61,34 +61,117 @@ void updateSymbol(DataModel::PublicObjectCache *cache,
 		catch ( ... ) {}
 	}
 
-	symbol->setLocation(latitude, longitude);
-	symbol->setDepth(depth);
-	symbol->setPreferredMagnitudeValue(M);
+	const DataModel::NodalPlane *np{};
+
+	if ( fm ) {
+		int preferredNodalPlane = 0;
+
+		try {
+			preferredNodalPlane = fm->nodalPlanes().preferredPlane();
+		}
+		catch ( Core::ValueException& ) {}
+
+		try {
+			if ( preferredNodalPlane == 0 ) {
+				np = &(fm->nodalPlanes().nodalPlane1());
+			}
+			else {
+				np = &(fm->nodalPlanes().nodalPlane2());
+			}
+		}
+		catch ( Core::ValueException& ) {}
+	}
+
+	symbol.free();
+
+	symbol.origin = new OriginSymbol;
+
+	try {
+		depth = org->depth();
+	}
+	catch ( ... ) {}
+
+	symbol.origin->setLocation(latitude, longitude);
+	symbol.origin->setDepth(depth);
+	symbol.origin->setPreferredMagnitudeValue(M);
 
 	Core::Time originTime;
 	originTime = org->time().value();
 
-	if ( Core::Time::UTC()-originTime < Core::TimeSpan(30*60,0) ) {
+	if ( Core::Time::UTC() - originTime < Core::TimeSpan(30 * 60, 0) ) {
 		// Consider the symbol for TT decorator
-		if ( !symbol->decorator() ) {
-			symbol->setDecorator(new TTDecorator());
+		if ( !symbol.origin->decorator() ) {
+			symbol.origin->setDecorator(new TTDecorator());
 		}
 
-		TTDecorator *d = static_cast<TTDecorator*>(symbol->decorator());
+		TTDecorator *d = static_cast<TTDecorator*>(symbol.origin->decorator());
 		d->setLatitude(latitude);
 		d->setLongitude(longitude);
 		d->setDepth(depth);
 		d->setPreferredMagnitudeValue(M);
 		d->setOriginTime(originTime);
 	}
-	else if ( symbol->decorator() ) {
-		if ( !symbol->decorator()->isVisible() ) {
-			symbol->setDecorator(nullptr);
+	else if ( symbol.origin->decorator() ) {
+		if ( !symbol.origin->decorator()->isVisible() ) {
+			symbol.origin->setDecorator(nullptr);
 		}
 	}
 
 	if ( canvas ) {
-		symbol->calculateMapPosition(canvas);
+		symbol.origin->calculateMapPosition(canvas);
+	}
+
+	if ( np ) {
+		np->strike().value();
+		np->dip().value();
+		np->rake().value();
+
+		Math::Tensor2Sd tensor;
+		Math::np2tensor({
+			np->strike().value(),
+			np->dip().value(),
+			np->rake().value()
+		}, tensor);
+
+		symbol.tensor = new Gui::TensorSymbol(tensor);
+
+		OriginPtr origin;
+
+		if ( fm->momentTensorCount() > 0 ) {
+			auto mt = fm->momentTensor(0);
+			origin = cache ? cache->get<Origin>(mt->derivedOriginID()) : Origin::Find(mt->derivedOriginID());
+			if ( origin ) {
+				org = origin.get();
+			}
+
+			mag = cache ? cache->get<Magnitude>(mt->momentMagnitudeID()) : Magnitude::Find(mt->momentMagnitudeID());
+			if ( mag ) {
+				try {
+					M = mag->magnitude();
+				}
+				catch ( ... ) {}
+			}
+		}
+
+		int size;
+		if ( M > 0 ) {
+			size = std::max(SCScheme.map.originSymbolMinSize, int(4.9 * (M - 1.2)));
+		}
+		else {
+			size = SCScheme.map.originSymbolMinSize;
+		}
+
+		symbol.tensor->setSize(QSize(size * 3 / 2, size * 3 / 2));
+		symbol.tensor->setShadingEnabled(true);
+		symbol.tensor->setPosition(QPointF(org->longitude(), org->latitude()));
+		symbol.tensor->setTColor(SCScheme.colors.originSymbol.depth.gradient.colorAt(depth, SCScheme.colors.originSymbol.depth.discrete));
+		symbol.tensor->setOffset(QPoint(-16, -32));
+		symbol.tensor->setDrawConnectorEnabled(true);
+		symbol.tensor->setPriority(Gui::Map::Symbol::HIGH);
+
+		if ( canvas ) {
+			symbol.tensor->calculateMapPosition(canvas);
+		}
 	}
 }
 
@@ -127,7 +210,7 @@ void EventLayer::setCurrentEvent(DataModel::Event *evt) {
 			_currentEvent = nullptr;
 		}
 		else {
-			_currentEvent = it.value();
+			_currentEvent = it.value().origin;
 		}
 	}
 
@@ -151,19 +234,38 @@ int EventLayer::eventCount() const {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void EventLayer::draw(const Map::Canvas *canvas, QPainter &p) {
+	EventSymbol *currentSymbol = nullptr;
+
 	// Render all symbols
 	for ( auto &symbol : _eventSymbols ) {
-		if ( symbol == _currentEvent ) {
+		if ( symbol.origin == _currentEvent ) {
+			currentSymbol = &symbol;
 			continue;
 		}
-		if ( symbol->isClipped() || !symbol->isVisible() ) {
-			continue;
+
+		if ( !symbol.origin->isClipped() && symbol.origin->isVisible() ) {
+			symbol.origin->draw(canvas, p);
 		}
-		symbol->draw(canvas, p);
+
+		if ( symbol.tensor ) {
+			if ( !symbol.tensor->isClipped() && symbol.tensor->isVisible() ) {
+				symbol.tensor->draw(canvas, p);
+			}
+		}
 	}
 
-	if ( _currentEvent && !_currentEvent->isClipped() ) {
-		_currentEvent->draw(canvas, p);
+	if( currentSymbol ) {
+		auto &symbol = *currentSymbol;
+
+		if ( !symbol.origin->isClipped() && symbol.origin->isVisible() ) {
+			symbol.origin->draw(canvas, p);
+		}
+
+		if ( symbol.tensor ) {
+			if ( !symbol.tensor->isClipped() && symbol.tensor->isVisible() ) {
+				symbol.tensor->draw(canvas, p);
+			}
+		}
 	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -179,8 +281,10 @@ bool EventLayer::isInside(const QMouseEvent *event, const QPointF &geoPos) {
 
 	while ( it != _eventSymbols.begin() ) {
 		--it;
-		if ( it.value()->isClipped() || !it.value()->isVisible() ) continue;
-		if ( it.value()->isInside(x, y) ) {
+		if ( it.value().origin->isClipped() || !it.value().origin->isVisible() ) {
+			continue;
+		}
+		if ( it.value().origin->isInside(x, y) ) {
 			_hoverChanged = _hoverId != it.key();
 			if ( _hoverChanged ) {
 				setHoverId(it.key());
@@ -259,17 +363,19 @@ void EventLayer::addEvent(Event *e, bool) {
 	auto it = _eventSymbols.find(e->publicID());
 
 	OriginPtr org = _cache ? _cache->get<Origin>(e->preferredOriginID()) : Origin::Find(e->preferredOriginID());
-	if ( org ) {
-		OriginSymbol *symbol;
+	FocalMechanismPtr fm;
+	if ( !e->preferredFocalMechanismID().empty() ) {
+		fm = _cache ? _cache->get<FocalMechanism>(e->preferredFocalMechanismID()) : FocalMechanism::Find(e->preferredFocalMechanismID());
+	}
 
-		if ( it == _eventSymbols.end() ) {
-			symbol = new OriginSymbol();
-		}
-		else {
+	if ( org ) {
+		EventSymbol symbol;
+
+		if ( it != _eventSymbols.end() ) {
 			symbol = it.value();
 		}
 
-		updateSymbol(_cache, canvas(), symbol, e, org.get());
+		updateSymbol(_cache, canvas(), symbol, e, org.get(), fm.get());
 		_eventSymbols[e->publicID()] = symbol;
 
 		// Create origin symbol and register it
@@ -292,8 +398,13 @@ void EventLayer::updateEvent(Event *e) {
 	}
 
 	OriginPtr org = _cache ? _cache->get<Origin>(e->preferredOriginID()) : Origin::Find(e->preferredOriginID());
+	FocalMechanismPtr fm;
+	if ( !e->preferredFocalMechanismID().empty() ) {
+		fm = _cache ? _cache->get<FocalMechanism>(e->preferredFocalMechanismID()) : FocalMechanism::Find(e->preferredFocalMechanismID());
+	}
+
 	if ( org ) {
-		updateSymbol(_cache, canvas(), it.value(), e, org.get());
+		updateSymbol(_cache, canvas(), it.value(), e, org.get(), fm.get());
 		emit updateRequested();
 	}
 }
@@ -308,10 +419,10 @@ void EventLayer::removeEvent(Event *e) {
 	if ( it == _eventSymbols.end() ) {
 		return;
 	}
-	if ( it.value() == _currentEvent ) {
+	if ( it.value().origin == _currentEvent ) {
 		_currentEvent = nullptr;
 	}
-	delete it.value();
+	it.value().free();
 	_eventSymbols.erase(it);
 	emit updateRequested();
 }
@@ -325,9 +436,9 @@ void EventLayer::tick() {
 	bool hasActiveDecorators = false;
 	auto it = _eventSymbols.begin();
 	for ( ; it != _eventSymbols.end(); ++it ) {
-		if ( it.value()->decorator() ) {
-			if ( !it.value()->decorator()->isVisible() ) {
-				it.value()->setDecorator(nullptr);
+		if ( it.value().origin->decorator() ) {
+			if ( !it.value().origin->decorator()->isVisible() ) {
+				it.value().origin->setDecorator(nullptr);
 			}
 			else
 				hasActiveDecorators = true;
@@ -362,7 +473,7 @@ void EventLayer::setHoverId(const std::string &id) {
 	if ( !_hoverId.empty() ) {
 		auto it = _eventSymbols.find(_hoverId);
 		if ( it != _eventSymbols.end() ) {
-			it.value()->setDepth(it.value()->depth());
+			it.value().origin->setDepth(it.value().origin->depth());
 			updateRequired = true;
 		}
 	}
@@ -372,8 +483,8 @@ void EventLayer::setHoverId(const std::string &id) {
 	if ( !_hoverId.empty() ) {
 		auto it = _eventSymbols.find(_hoverId);
 		if ( it != _eventSymbols.end() ) {
-			it.value()->setFillColor(it.value()->color());
-			it.value()->setColor(QColor(33,53,81));
+			it.value().origin->setFillColor(it.value().origin->color());
+			it.value().origin->setColor(QColor(33,53,81));
 			updateRequired = true;
 		}
 	}

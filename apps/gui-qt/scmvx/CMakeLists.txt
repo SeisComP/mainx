@@ -8,6 +8,7 @@ INCLUDE_DIRECTORIES(.)
 
 SET(
 	${PACKAGE_NAME}_SOURCES
+		backport/eventlayer.cpp
 		map/stationsymbol.cpp
 		map/eventheatlayer.cpp
 		map/networklayer.cpp
@@ -30,6 +31,7 @@ SET(
 
 SET(
 	${PACKAGE_NAME}_MOC_HEADERS
+		backport/eventlayer.h
 		map/eventheatlayer.h
 		map/networklayer.h
 		map/eventlayer.h

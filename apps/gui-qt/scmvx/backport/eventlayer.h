@@ -18,70 +18,58 @@
  ***************************************************************************/
 
 
-#ifndef SEISCOMP_MAPVIEWX_LAYERS_EVENTLAYER_H
-#define SEISCOMP_MAPVIEWX_LAYERS_EVENTLAYER_H
+#ifndef SEISCOMP_GUI_BACKPORT_EVENTLAYER_H
+#define SEISCOMP_GUI_BACKPORT_EVENTLAYER_H
 
 
-#ifndef Q_MOC_RUN
-#include <seiscomp/datamodel/publicobjectcache.h>
+#include <seiscomp/gui/map/layer.h>
+#include <seiscomp/gui/map/legend.h>
 #include <seiscomp/gui/datamodel/originsymbol.h>
-#include "../backport/eventlayer.h"
-#endif
-
+#include <seiscomp/gui/datamodel/tensorsymbol.h>
 #include <QMap>
 
 
-namespace Seiscomp::MapViewX {
+namespace Seiscomp {
+namespace Gui {
+namespace Backport {
 
 
-class EventLayer : public Seiscomp::Gui::Backport::EventLayer {
+class EventLayer : public Map::Layer {
 	Q_OBJECT
-
 
 	// ----------------------------------------------------------------------
 	//  X'truction
 	// ----------------------------------------------------------------------
 	public:
-		EventLayer(QObject* parent, DataModel::PublicObjectCache *cache);
+		//! C'tor
+		EventLayer(QObject* parent = nullptr);
+
+		//! D'tor
+		~EventLayer();
 
 
 	// ----------------------------------------------------------------------
 	//  Layer interface
 	// ----------------------------------------------------------------------
 	public:
-		/**
-		 * @brief Sets the current event if available as symbol. This event
-		 *        will be drawn on-top and toggle its colors when calling
-		 *        tick (blinking).
-		 * @param evt The pointer to the current event. Actually only the
-		 *            publicID will be read and looked up in the local store.
-		 */
-		void setCurrentEvent(DataModel::Event *evt);
-		int eventCount() const;
+		virtual void draw(const Map::Canvas *, QPainter &);
+		virtual void calculateMapPosition(const Map::Canvas *canvas);
+		virtual bool isInside(const QMouseEvent *event, const QPointF &geoPos);
 
-
-	// ----------------------------------------------------------------------
-	//  Layer interface
-	// ----------------------------------------------------------------------
-	public:
-		void draw(const Gui::Map::Canvas *, QPainter &) override;
-		bool isInside(const QMouseEvent *event, const QPointF &geoPos) override;
-
-		void handleLeaveEvent() override;
-		bool filterMouseDoubleClickEvent(QMouseEvent *event, const QPointF &geoPos) override;
-		bool filterMousePressEvent(QMouseEvent *event, const QPointF &geoPos) override;
-		bool filterMouseReleaseEvent(QMouseEvent *event, const QPointF &geoPos) override;
+		virtual void handleEnterEvent();
+		virtual void handleLeaveEvent();
+		virtual bool filterMouseMoveEvent(QMouseEvent *event, const QPointF &geoPos);
+		virtual bool filterMouseDoubleClickEvent(QMouseEvent *event, const QPointF &geoPos);
 
 
 	// ----------------------------------------------------------------------
 	//  Slots
 	// ----------------------------------------------------------------------
 	public slots:
-		void clear() override;
-		void addEvent(Seiscomp::DataModel::Event*,bool) override;
-		void updateEvent(Seiscomp::DataModel::Event*) override;
-		void removeEvent(Seiscomp::DataModel::Event*) override;
-		void tick();
+		virtual void clear();
+		virtual void addEvent(Seiscomp::DataModel::Event*,bool);
+		virtual void updateEvent(Seiscomp::DataModel::Event*);
+		virtual void removeEvent(Seiscomp::DataModel::Event*);
 
 
 	// ----------------------------------------------------------------------
@@ -93,21 +81,41 @@ class EventLayer : public Seiscomp::Gui::Backport::EventLayer {
 
 
 	// ----------------------------------------------------------------------
-	//  Private members
+	//  Internal types
 	// ----------------------------------------------------------------------
-	private:
-		void setHoverId(const std::string &id);
+	public:
+		struct EventSymbol {
+			OriginSymbol *origin{nullptr};
+			TensorSymbol *tensor{nullptr};
+
+			void free() {
+				if ( origin ) {
+					delete origin;
+					origin = nullptr;
+				}
+
+				if ( tensor ) {
+					delete tensor;
+					tensor = nullptr;
+				}
+			}
+		};
+
+		using SymbolMap = QMap<std::string, EventSymbol>;
 
 
 	// ----------------------------------------------------------------------
 	//  Protected members
 	// ----------------------------------------------------------------------
 	protected:
-		Gui::OriginSymbol            *_currentEvent;
-		DataModel::PublicObjectCache *_cache;
+		SymbolMap           _eventSymbols;
+		mutable std::string _hoverId;
+		mutable bool        _hoverChanged;
 };
 
 
+}
+}
 }
 
 

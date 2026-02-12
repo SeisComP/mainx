@@ -775,6 +775,8 @@ void NetworkLayer::tick() {
 	bool changed = false;
 
 	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
+		s->setPriority(Gui::Map::Symbol::NONE);
+
 		if ( !s->_data ) {
 			continue;
 		}
@@ -798,6 +800,8 @@ void NetworkLayer::tick() {
 			}
 		}
 		else {
+			s->setPriority(Gui::Map::Symbol::HIGH);
+
 			if ( global.tickToggleState ) {
 				// Trigger on
 				int alpha = qMax(
@@ -810,7 +814,7 @@ void NetworkLayer::tick() {
 					)
 				);
 				s->setFrameColor(QColor(255,0,0,alpha));
-				s->setFrameSize(2);
+				s->setFrameSize(global.triggerFrameSize);
 			}
 			else {
 				// Trigger off

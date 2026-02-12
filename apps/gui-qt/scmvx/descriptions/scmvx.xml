@@ -64,10 +64,15 @@
 					Time to keep waveform data in memory.
 					</description>
 				</parameter>
-				<parameter name="triggerTimeout" type="double" default="60" unit="s">
+				<parameter name="triggerTimeout" type="double" default="900" unit="s">
 					<description>
 					Time span to show phase picks of a station by a blinking
 					triangle.
+					</description>
+				</parameter>
+				<parameter name="triggerFrameSize" type="int" default="3" unit="px">
+					<description>
+					The size of the frame of a station symbol if in trigger mode.
 					</description>
 				</parameter>
 				<parameter name="groundMotionFilter" type="string" default="ITAPER(60)>>BW_HP(4,0.5)">

@@ -52,6 +52,7 @@ void Settings::accept(System::Application::SettingsLinker &linker) {
 	& cfg(maximumAmplitudeTimeSpan, "stations.amplitudeTimeSpan")
 	& cfg(ringBuffer, "stations.groundMotionRecordLifeSpan")
 	& cfg(triggerTimeout, "stations.triggerTimeout")
+	& cfg(triggerFrameSize, "stations.triggerFrameSize")
 	& cfg(eventTimeSpan, "readEventsNotOlderThan")
 	& cfg(centerOrigins, "centerOrigins")
 	& cfg(showLatestEvent, "showLatestEvent")

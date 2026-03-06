@@ -254,7 +254,7 @@ void EventLayer::draw(const Map::Canvas *canvas, QPainter &p) {
 		}
 	}
 
-	if( currentSymbol ) {
+	if ( currentSymbol ) {
 		auto &symbol = *currentSymbol;
 
 		if ( !symbol.origin->isClipped() && symbol.origin->isVisible() ) {
@@ -404,7 +404,11 @@ void EventLayer::updateEvent(Event *e) {
 	}
 
 	if ( org ) {
+		auto oldOriginSymbol = it.value().origin;
 		updateSymbol(_cache, canvas(), it.value(), e, org.get(), fm.get());
+		if ( _currentEvent == oldOriginSymbol ) {
+			_currentEvent = it.value().origin;
+		}
 		emit updateRequested();
 	}
 }

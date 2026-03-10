@@ -119,6 +119,7 @@ CurrentEventLayer::CurrentEventLayer(QObject* parent)
 void CurrentEventLayer::setEvent(Event *evt) {
 	_isValid = evt != nullptr;
 	if ( !_isValid ) {
+		emit updateRequested();
 		return;
 	}
 
@@ -138,11 +139,14 @@ void CurrentEventLayer::setEvent(Event *evt) {
 	auto *org = Origin::Find(evt->preferredOriginID());
 	if ( !org ) {
 		_isValid = false;
+		emit updateRequested();
 		return;
 	}
 
 	_originTime = org->time().value();
 	_region = eventRegion(evt).c_str();
+
+	emit updateRequested();
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

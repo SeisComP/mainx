@@ -71,8 +71,15 @@ void MainWindow::Event::setEvent(DataModel::Event *evt, ObjectCache &cache) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool MainWindow::Event::isMoreRecent(const Event &other) const {
-	if ( !isValid() ) return false;
-	if ( !other ) return true;
+	if ( !isValid() ) {
+		return false;
+	}
+	if ( !other ) {
+		return true;
+	}
+	if ( event->publicID() == other.event->publicID() ) {
+		return false;
+	}
 	return preferredOrigin->time().value() > other.preferredOrigin->time().value();
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

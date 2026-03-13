@@ -885,6 +885,47 @@ void MainWindow::updateGroundMotion(Settings::StationData *data) {
 
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void MainWindow::updateStation(DataModel::ConfigStation *cs, DataModel::Operation op) {
+	switch ( op ) {
+		case DataModel::OP_ADD:
+		{
+			// TODO
+			break;
+		}
+		case DataModel::OP_UPDATE:
+		{
+			auto staID = cs->networkCode() + "." + cs->stationCode();
+			auto it = global.stationIDConfig.find(staID);
+			if ( it != global.stationIDConfig.end() ) {
+				if ( it->second->enabled != cs->enabled() ) {
+					it->second->enabled = cs->enabled();
+					_stationLayer->updateStation(staID);
+				}
+			}
+			break;
+		}
+		case DataModel::OP_REMOVE:
+		{
+			auto staID = cs->networkCode() + "." + cs->stationCode();
+			auto it = global.stationIDConfig.find(staID);
+			if ( it != global.stationIDConfig.end() ) {
+				it->second->enabled = false;
+				it->second->bindings = nullptr;
+				it->second->state = Settings::Unconfigured;
+				_stationLayer->updateStation(staID);
+			}
+			break;
+		}
+		default:
+			break;
+	}
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool MainWindow::eventFilter(QObject *object, QEvent *event) {
 	if ( object == _mapWidget ) {
 		if ( event->type() == QEvent::MouseButtonRelease ) {

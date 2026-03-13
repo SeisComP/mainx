@@ -134,7 +134,7 @@ class NetworkLayer : public Gui::Map::Layer {
 	// ----------------------------------------------------------------------
 	public:
 		//! Associative container to map network codes to colors
-		typedef std::map<std::string, QColor> NetworkColors;
+		using NetworkColors = std::map<std::string, QColor>;
 
 		enum ColorMode {
 			Default,
@@ -200,6 +200,8 @@ class NetworkLayer : public Gui::Map::Layer {
 		void setStationsVisible(QSet<const DataModel::Station *> *);
 
 		Gui::Map::Legend *mainLegend() const;
+
+		void updateStation(const std::string &staID);
 
 
 	// ----------------------------------------------------------------------
@@ -275,8 +277,8 @@ class NetworkLayer : public Gui::Map::Layer {
 	//  Private members
 	// ----------------------------------------------------------------------
 	private:
-		typedef QVector<NetworkLayerSymbol*> Symbols;
-		typedef std::map<void*, NetworkLayerSymbol*> StationSymbolMap;
+		using Symbols = QVector<NetworkLayerSymbol*>;
+		using StationSymbolMap = std::map<std::string, NetworkLayerSymbol*>;
 
 		bool                                     _showChannelCodes;
 		bool                                     _showIssues;

@@ -63,6 +63,7 @@ class MainWindow : public Gui::MainWindow {
 		void updateQC(Settings::StationData *data,
 		              DataModel::WaveformQuality *wfq);
 		void updateGroundMotion(Settings::StationData *data);
+		void updateStation(DataModel::ConfigStation *cs, DataModel::Operation op);
 
 
 	protected:

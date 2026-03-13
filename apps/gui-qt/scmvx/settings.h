@@ -73,7 +73,7 @@ struct Settings : System::Application::AbstractSettings {
 
 			OPT(Core::Time)           triggerTime;
 
-			bool                      enabled;
+			bool                      enabled{false};
 			QCParameters              qc;
 
 			void                     *viewData{nullptr}; //! The map symbol

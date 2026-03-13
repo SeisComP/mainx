@@ -574,10 +574,12 @@ void NetworkLayer::setInventory(DataModel::Inventory *inv,
 	size_t n, s;
 
 	Core::Time refTime;
-	if ( time )
+	if ( time ) {
 		refTime = *time;
-	else
+	}
+	else {
 		refTime = Core::Time::UTC();
+	}
 
 	for ( n = 0; n < inv->networkCount(); ++n ) {
 		DataModel::Network *net = inv->network(n);
@@ -605,7 +607,8 @@ void NetworkLayer::setInventory(DataModel::Inventory *inv,
 				continue;
 			}
 
-			if ( _stationSymbolLookup.find(sta) != _stationSymbolLookup.end() ) {
+			auto staID = net->code() + "." + sta->code();
+			if ( _stationSymbolLookup.find(staID) != _stationSymbolLookup.end() ) {
 				// Symbol with ID already registered
 				continue;
 			}
@@ -616,7 +619,7 @@ void NetworkLayer::setInventory(DataModel::Inventory *inv,
 			symbol->setLocation(lat, lon);
 			updateColor(symbol);
 
-			_stationSymbolLookup[sta] = symbol;
+			_stationSymbolLookup[staID] = symbol;
 			_stationSymbols.append(symbol);
 
 			// Register symbol with config
@@ -763,6 +766,21 @@ void NetworkLayer::setShowUnbound(bool enable) {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Gui::Map::Legend *NetworkLayer::mainLegend() const {
 	return _legend;
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void NetworkLayer::updateStation(const std::string &staID) {
+	auto it = _stationSymbolLookup.find(staID);
+	if ( it == _stationSymbolLookup.end() ) {
+		return;
+	}
+
+	updateColor(it->second);
+	update();
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -1039,6 +1057,8 @@ bool NetworkLayer::filterMouseDoubleClickEvent(QMouseEvent *, const QPointF &) {
 void NetworkLayer::updateColor(NetworkLayerSymbol *symbol) {
 	currentGradient = nullptr;
 
+	bool enabled = true;
+
 	symbol->setState(Settings::OK);
 	auto it  = global.stationConfig.find(symbol->model());
 	if ( it == global.stationConfig.end() ) {
@@ -1047,62 +1067,68 @@ void NetworkLayer::updateColor(NetworkLayerSymbol *symbol) {
 	else {
 		const Settings::StationData *data = it->second.get();
 		symbol->setState(data->state);
+		enabled = data->enabled;
 	}
 
-	switch ( _colorMode ) {
-		case Default:
-			symbol->setColor(defaultColor);
-			break;
+	if ( enabled ) {
+		switch ( _colorMode ) {
+			case Default:
+				symbol->setColor(defaultColor);
+				break;
 
-		case Network:
-		{
-			QColor color = _networkColors[symbol->model()->network()->code()];
-			QColor baseColor = defaultColor.toHsv();
+			case Network:
+			{
+				QColor color = _networkColors[symbol->model()->network()->code()];
+				QColor baseColor = defaultColor.toHsv();
 
-			if ( !color.isValid() ) {
-				// distribute colors in color spectrum evenly with golden ratio
-				float h = (_networkColors.size()-1) * goldenRationConjugate;
-				if ( h > 1 ) h -= int(h);
-				color = QColor::fromHsv((int(360*h)+baseColor.hue())%360, 192, 192);
-				_networkColors[symbol->model()->network()->code()] = color;
+				if ( !color.isValid() ) {
+					// distribute colors in color spectrum evenly with golden ratio
+					float h = (_networkColors.size()-1) * goldenRationConjugate;
+					if ( h > 1 ) h -= int(h);
+					color = QColor::fromHsv((int(360*h)+baseColor.hue())%360, 192, 192);
+					_networkColors[symbol->model()->network()->code()] = color;
+				}
+
+				symbol->setColor(color);
+				break;
 			}
 
-			symbol->setColor(color);
-			break;
-		}
+			case GroundMotion:
+			{
+				currentGradient = &_gmGradient;
 
-		case GroundMotion:
-		{
-			currentGradient = &_gmGradient;
+				auto data = symbol->data();
+				symbol->setColorFromValue(data->maximumAmplitude);
 
-			auto data = symbol->data();
-			symbol->setColorFromValue(data->maximumAmplitude);
-
-			break;
-		}
-
-		case QC:
-		{
-			auto git = _qcGradients.find(_activeQCParameter);
-			if ( git != _qcGradients.end() ) {
-				currentGradient = &git.value();
+				break;
 			}
 
-			auto data = symbol->data();
-			auto dit = data->qc.find(_activeQCParameter);
-			if ( dit != data->qc.end() ) {
-				symbol->setColorFromValue(dit->second->value());
+			case QC:
+			{
+				auto git = _qcGradients.find(_activeQCParameter);
+				if ( git != _qcGradients.end() ) {
+					currentGradient = &git.value();
+				}
+
+				auto data = symbol->data();
+				auto dit = data->qc.find(_activeQCParameter);
+				if ( dit != data->qc.end() ) {
+					symbol->setColorFromValue(dit->second->value());
+				}
+				else {
+					symbol->setColorFromValue(-1);
+				}
+
+				break;
 			}
-			else {
+
+			default:
 				symbol->setColorFromValue(-1);
-			}
-
-			break;
+				break;
 		}
-
-		default:
-			symbol->setColorFromValue(-1);
-			break;
+	}
+	else {
+		symbol->setColor(SCScheme.colors.stations.disabled);
 	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

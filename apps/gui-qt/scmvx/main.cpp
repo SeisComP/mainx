@@ -49,6 +49,13 @@ Application::Application(int &argc, char **argv)
 	addMessagingSubscription("QC");
 
 	bindSettings(&global);
+
+	connect(this, &Application::notifierAvailable, this, [this](Seiscomp::DataModel::Notifier *n) {
+		auto cs = DataModel::ConfigStation::Cast(n->object());
+		if ( cs ) {
+			_mainWindow->updateStation(cs, n->operation());
+		}
+	});
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -215,7 +222,7 @@ bool Application::init() {
 			keys = global.bindings->getKeys(net->code(), sta->code());
 
 			Settings::StationDataPtr data = new Settings::StationData;
-			data->enabled = keys != nullptr;
+			data->enabled = !keys || keys->enabled();
 			global.stationConfig[sta] = data;
 			global.stationIDConfig[net->code() + "." + sta->code()] = data;
 

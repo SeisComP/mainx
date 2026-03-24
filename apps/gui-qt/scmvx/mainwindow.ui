@@ -343,7 +343,7 @@
     <string>Reset view</string>
    </property>
    <property name="shortcut">
-    <string>N</string>
+    <string>Ctrl+N</string>
    </property>
   </action>
   <action name="actionOpenFile">

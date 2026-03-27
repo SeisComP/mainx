@@ -243,19 +243,20 @@ Hotkeys
 
    C; Center map around latest event upon event update
    G; Show map base layer in gray scale
-   N; Reset view to default
    :kbd:`F1`              ;Open SeisComP documentation in default browser
    :kbd:`Shift + F1`      ;Open scmvx documentation in default browser
    :kbd:`F2`              ;Open dialog for connecting to database and messaging
    :kbd:`F6`              ;Toggle latest event information on map
    :kbd:`F7`              ;Toggle legend
    :kbd:`F8`              ;Toggle station issues in Network tab
+   :kbd:`Shift + F8`      ;Toggle stations without global bindings
    :kbd:`F9`              ;Toggle station annotation
    :kbd:`F10`             ;Switch to event list (Events tab)
    :kbd:`F11`             ;Toggle full screen mode
-   :kbd:`CTRL + F`        ;Search station
-   :kbd:`CTRL + O`        ;Open event parameter XML file
-   :kbd:`CTRL + Q`        ;Quit scmvx
+   :kbd:`Ctrl + F`        ;Search station
+   :kbd:`Ctrl + N`        ;Reset view to default
+   :kbd:`Ctrl + O`        ;Open event parameter XML file
+   :kbd:`Ctrl + Q`        ;Quit scmvx
    :kbd:`left`, :kbd:`right`, :kbd:`up`, :kbd:`down` ;Move focus of map left, right, up, down
    Double mouse click     ;Center map
    Mouse wheel            ;Zoom in or out in map

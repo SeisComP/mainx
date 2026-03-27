@@ -347,6 +347,9 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	_updateTimer.start();
 
 	_eventHeatLayer->setCompositionMode(true);
+	for ( int i = 0; i < _networkLayer->legendCount(); ++i ) {
+		_networkLayer->legend(i)->bringToFront();
+	}
 
 	Core::TimeWindow tw;
 	tw.setEndTime(Core::Time::UTC());

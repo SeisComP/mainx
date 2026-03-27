@@ -218,41 +218,41 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 
 	_annotationLayer->setVisible(_ui.actionShowStationAnnotations->isChecked());
 
-	_stationLayer = new NetworkLayer(_mapWidget);
+	_networkLayer = new NetworkLayer(_mapWidget);
 
 	if ( global.stationLegendPosition == "topleft" ) {
-		_stationLayer->mainLegend()->setArea(Qt::AlignLeft | Qt::AlignTop);
+		_networkLayer->mainLegend()->setArea(Qt::AlignLeft | Qt::AlignTop);
 	}
 	else if ( global.stationLegendPosition == "topright" ) {
-		_stationLayer->mainLegend()->setArea(Qt::AlignRight | Qt::AlignTop);
+		_networkLayer->mainLegend()->setArea(Qt::AlignRight | Qt::AlignTop);
 	}
 	else if ( global.stationLegendPosition == "bottomright" ) {
-		_stationLayer->mainLegend()->setArea(Qt::AlignRight | Qt::AlignBottom);
+		_networkLayer->mainLegend()->setArea(Qt::AlignRight | Qt::AlignBottom);
 	}
 	else if ( global.stationLegendPosition == "bottomleft" ) {
-		_stationLayer->mainLegend()->setArea(Qt::AlignLeft | Qt::AlignBottom);
+		_networkLayer->mainLegend()->setArea(Qt::AlignLeft | Qt::AlignBottom);
 	}
 
 	_ui.actionShowChannelCodes->setChecked(global.annotationsWithChannels);
 	_ui.actionShowUnboundStations->setChecked(global.showUnboundStations);
 
-	_stationLayer->setInventory(Client::Inventory::Instance()->inventory(), _annotationLayer->annotations());
-	_stationLayer->setShowChannelCodes(_ui.actionShowChannelCodes->isChecked());
-	_stationLayer->setShowIssues(_ui.actionShowStationIssues->isChecked());
-	_stationLayer->setShowUnbound(_ui.actionShowUnboundStations->isChecked());
+	_networkLayer->setInventory(Client::Inventory::Instance()->inventory(), _annotationLayer->annotations());
+	_networkLayer->setShowChannelCodes(_ui.actionShowChannelCodes->isChecked());
+	_networkLayer->setShowIssues(_ui.actionShowStationIssues->isChecked());
+	_networkLayer->setShowUnbound(_ui.actionShowUnboundStations->isChecked());
 
-	connect(_stationLayer, SIGNAL(stationEntered(Seiscomp::DataModel::Station*)),
+	connect(_networkLayer, SIGNAL(stationEntered(Seiscomp::DataModel::Station*)),
 	        this, SLOT(stationEntered(Seiscomp::DataModel::Station*)));
-	connect(_stationLayer, SIGNAL(stationLeft()), this, SLOT(stationLeft()));
-	connect(_stationLayer, SIGNAL(stationClicked(Seiscomp::DataModel::Station*)),
+	connect(_networkLayer, SIGNAL(stationLeft()), this, SLOT(stationLeft()));
+	connect(_networkLayer, SIGNAL(stationClicked(Seiscomp::DataModel::Station*)),
 	        this, SLOT(stationClicked(Seiscomp::DataModel::Station*)));
 
 	connect(_ui.actionShowStationAnnotations, SIGNAL(toggled(bool)), _annotationLayer, SLOT(setVisible(bool)));
 	connect(_ui.actionShowStationAnnotations, SIGNAL(toggled(bool)), _mapWidget, SLOT(update()));
-	connect(_ui.actionShowChannelCodes, SIGNAL(toggled(bool)), _stationLayer, SLOT(setShowChannelCodes(bool)));
+	connect(_ui.actionShowChannelCodes, SIGNAL(toggled(bool)), _networkLayer, SLOT(setShowChannelCodes(bool)));
 	connect(_ui.actionShowChannelCodes, SIGNAL(toggled(bool)), _mapWidget, SLOT(update()));
-	connect(_ui.actionShowStationIssues, SIGNAL(toggled(bool)), _stationLayer, SLOT(setShowIssues(bool)));
-	connect(_ui.actionShowUnboundStations, SIGNAL(toggled(bool)), _stationLayer, SLOT(setShowUnbound(bool)));
+	connect(_ui.actionShowStationIssues, SIGNAL(toggled(bool)), _networkLayer, SLOT(setShowIssues(bool)));
+	connect(_ui.actionShowUnboundStations, SIGNAL(toggled(bool)), _networkLayer, SLOT(setShowUnbound(bool)));
 	connect(_ui.actionSearchStation, SIGNAL(triggered()), this, SLOT(searchStation()));
 	connect(_ui.actionCenterMapOnEventUpdate, SIGNAL(toggled(bool)), this, SLOT(toggleCentering(bool)));
 	connect(_ui.actionResetView, SIGNAL(triggered()), this, SLOT(resetView()));
@@ -264,60 +264,60 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 		action = _ui.menuQC->addAction(tr("Delay")); action->setData("delay");
 		action->setCheckable(true);
 		action->setActionGroup(qcActions);
-		action->setChecked(action->data().toString() == _stationLayer->activeQCParameter().c_str());
+		action->setChecked(action->data().toString() == _networkLayer->activeQCParameter().c_str());
 
 		action = _ui.menuQC->addAction(tr("Latency"));
 		action->setData("latency"); action->setCheckable(true);
 		action->setActionGroup(qcActions);
-		action->setChecked(action->data().toString() == _stationLayer->activeQCParameter().c_str());
+		action->setChecked(action->data().toString() == _networkLayer->activeQCParameter().c_str());
 
 		action = _ui.menuQC->addAction(tr("Timing Quality"));
 		action->setData("timing quality");
 		action->setCheckable(true);
 		action->setActionGroup(qcActions);
-		action->setChecked(action->data().toString() == _stationLayer->activeQCParameter().c_str());
+		action->setChecked(action->data().toString() == _networkLayer->activeQCParameter().c_str());
 
 		action = _ui.menuQC->addAction(tr("Gaps Interval"));
 		action->setData("gaps interval");
 		action->setCheckable(true);
 		action->setActionGroup(qcActions);
-		action->setChecked(action->data().toString() == _stationLayer->activeQCParameter().c_str());
+		action->setChecked(action->data().toString() == _networkLayer->activeQCParameter().c_str());
 
 		action = _ui.menuQC->addAction(tr("Gaps Length"));
 		action->setData("gaps length");
 		action->setCheckable(true);
 		action->setActionGroup(qcActions);
-		action->setChecked(action->data().toString() == _stationLayer->activeQCParameter().c_str());
+		action->setChecked(action->data().toString() == _networkLayer->activeQCParameter().c_str());
 
 		action = _ui.menuQC->addAction(tr("Overlaps Interval"));
 		action->setData("overlaps interval");
 		action->setCheckable(true);
 		action->setActionGroup(qcActions);
-		action->setChecked(action->data().toString() == _stationLayer->activeQCParameter().c_str());
+		action->setChecked(action->data().toString() == _networkLayer->activeQCParameter().c_str());
 
 		action = _ui.menuQC->addAction(tr("Availability"));
 		action->setData("availability");
 		action->setCheckable(true);
 		action->setActionGroup(qcActions);
-		action->setChecked(action->data().toString() == _stationLayer->activeQCParameter().c_str());
+		action->setChecked(action->data().toString() == _networkLayer->activeQCParameter().c_str());
 
 		action = _ui.menuQC->addAction(tr("Offset"));
 		action->setData("offset");
 		action->setCheckable(true);
 		action->setActionGroup(qcActions);
-		action->setChecked(action->data().toString() == _stationLayer->activeQCParameter().c_str());
+		action->setChecked(action->data().toString() == _networkLayer->activeQCParameter().c_str());
 
 		action = _ui.menuQC->addAction(tr("RMS"));
 		action->setData("rms");
 		action->setCheckable(true);
 		action->setActionGroup(qcActions);
-		action->setChecked(action->data().toString() == _stationLayer->activeQCParameter().c_str());
+		action->setChecked(action->data().toString() == _networkLayer->activeQCParameter().c_str());
 	}
 
 	connect(_ui.menuQC, SIGNAL(triggered(QAction*)), this, SLOT(applyQCMode(QAction*)));
 
 	_mapWidget->canvas().addLayer(_eventHeatLayer);
-	_mapWidget->canvas().addLayer(_stationLayer);
+	_mapWidget->canvas().addLayer(_networkLayer);
 	_mapWidget->canvas().addLayer(_eventLayer);
 	_mapWidget->canvas().addLayer(_annotationLayer);
 	_mapWidget->canvas().addLayer(_currentEventLayer);
@@ -456,16 +456,16 @@ void MainWindow::switchTab(int index) {
 		}
 
 		if ( w == _ui.tabNetwork ) {
-			_stationLayer->setColorMode(NetworkLayer::Network);
+			_networkLayer->setColorMode(NetworkLayer::Network);
 		}
 		else if ( w == _ui.tabGM ) {
-			_stationLayer->setColorMode(NetworkLayer::GroundMotion);
+			_networkLayer->setColorMode(NetworkLayer::GroundMotion);
 		}
 		else if ( w == _ui.tabQC ) {
-			_stationLayer->setColorMode(NetworkLayer::QC);
+			_networkLayer->setColorMode(NetworkLayer::QC);
 		}
 		else {
-			_stationLayer->setColorMode(NetworkLayer::Default);
+			_networkLayer->setColorMode(NetworkLayer::Default);
 		}
 	}
 }
@@ -489,7 +489,7 @@ void MainWindow::timeout() {
 		}
 	}
 
-	_stationLayer->tick();
+	_networkLayer->tick();
 	_eventLayer->tick();
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -847,13 +847,13 @@ void MainWindow::readEventParameters(const std::string &file) {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void MainWindow::updateQC(Settings::StationData *data,
                           DataModel::WaveformQuality *wfq) {
-	if ( _stationLayer->colorMode() != NetworkLayer::QC )
+	if ( _networkLayer->colorMode() != NetworkLayer::QC )
 		return;
 
 	auto symbol = reinterpret_cast<NetworkLayerSymbol*>(data->viewData);
 	if ( !symbol ) return;
 
-	if ( wfq->parameter() == _stationLayer->activeQCParameter() ) {
+	if ( wfq->parameter() == _networkLayer->activeQCParameter() ) {
 		symbol->setColorFromValue(wfq->value());
 		_mapDirty = true;
 	}
@@ -870,7 +870,7 @@ void MainWindow::updateGroundMotion(Settings::StationData *data) {
 		return;
 	}
 
-	if ( _stationLayer->colorMode() == NetworkLayer::GroundMotion ) {
+	if ( _networkLayer->colorMode() == NetworkLayer::GroundMotion ) {
 		symbol->setColorFromValue(data->maximumAmplitude);
 		_mapDirty = true;
 	}
@@ -899,7 +899,7 @@ void MainWindow::updateStation(DataModel::ConfigStation *cs, DataModel::Operatio
 			if ( it != global.stationIDConfig.end() ) {
 				if ( it->second->enabled != cs->enabled() ) {
 					it->second->enabled = cs->enabled();
-					_stationLayer->updateStation(staID);
+					_networkLayer->updateStation(staID);
 				}
 			}
 			break;
@@ -912,7 +912,7 @@ void MainWindow::updateStation(DataModel::ConfigStation *cs, DataModel::Operatio
 				it->second->enabled = false;
 				it->second->bindings = nullptr;
 				it->second->state = Settings::Unconfigured;
-				_stationLayer->updateStation(staID);
+				_networkLayer->updateStation(staID);
 			}
 			break;
 		}
@@ -1015,7 +1015,7 @@ void MainWindow::updateEventTabText() {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void MainWindow::applyQCMode(QAction *action) {
-	_stationLayer->setActiveQCParameter(action->data().toString().toStdString());
+	_networkLayer->setActiveQCParameter(action->data().toString().toStdString());
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -1044,7 +1044,7 @@ void MainWindow::searchStation() {
 void MainWindow::filterStations() {
 	if ( _currentSearch ) {
 		auto result = _currentSearch->visibleData();
-		_stationLayer->setStationsVisible(&result);
+		_networkLayer->setStationsVisible(&result);
 
 		if ( !result.isEmpty() ) {
 			_mapWidget->canvas().setMapCenter(
@@ -1065,7 +1065,7 @@ void MainWindow::filterStations() {
 void MainWindow::objectDestroyed(QObject *obj) {
 	if ( _currentSearch == obj ) {
 		_currentSearch = nullptr;
-		_stationLayer->setStationsVisible(nullptr);
+		_networkLayer->setStationsVisible(nullptr);
 	}
 	else if ( _eventDetails == obj ) {
 		_eventDetailsState = _eventDetails->saveGeometry();

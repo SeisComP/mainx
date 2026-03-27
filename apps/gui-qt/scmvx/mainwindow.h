@@ -144,7 +144,7 @@ class MainWindow : public Gui::MainWindow {
 		QTimer                         _updateTimer;
 		Gui::MapWidget                *_mapWidget;
 		Gui::EventListView            *_eventListView;
-		NetworkLayer                  *_stationLayer;
+		NetworkLayer                  *_networkLayer;
 		Gui::Map::AnnotationLayer     *_annotationLayer;
 		EventLayer                    *_eventLayer;
 		EventHeatLayer                *_eventHeatLayer;

@@ -166,14 +166,26 @@ void NetworkLayerSymbol::setColorFromValue(double value) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void NetworkLayerSymbol::updateColor() {
-	if ( _value < 0 ) {
-		setColor(currentGradient ? currentGradient->unsetColor : QColor(0,0,0,128));
+	bool enabled = true;
+
+	auto it  = global.stationConfig.find(model());
+	if ( it != global.stationConfig.end() ) {
+		enabled = it->second->enabled;
 	}
-	else if ( currentGradient ) {
-		setColor(currentGradient->colorAt(_value, true));
+
+	if ( enabled ) {
+		if ( _value < 0 ) {
+			setColor(currentGradient ? currentGradient->unsetColor : QColor(0,0,0,128));
+		}
+		else if ( currentGradient ) {
+			setColor(currentGradient->colorAt(_value, true));
+		}
+		else {
+			setColor(Qt::white);
+		}
 	}
 	else {
-		setColor(Qt::white);
+		setColor(SCScheme.colors.stations.disabled);
 	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

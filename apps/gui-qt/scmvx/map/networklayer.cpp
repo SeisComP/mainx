@@ -278,14 +278,12 @@ void NetworkLayerLegend::updateFrom(NetworkLayer *layer) {
 			const NetworkLayer::NetworkColors &colors = layer->networkColors();
 
 			_items.clear();
-			NetworkLayer::NetworkColors::const_iterator it;
-			for ( it = colors.begin(); it != colors.end(); ++it )
-				_items.append(QPair<QString, QColor>(it->first.c_str(), it->second));
+
+			for ( auto &[name, color] : colors ) {
+				_items.append(QPair<QString, QColor>(name.c_str(), color));
+			}
 
 			_maxColumns = 6;
-			updateLayout();
-
-			setEnabled(true);
 			break;
 		}
 
@@ -312,9 +310,6 @@ void NetworkLayerLegend::updateFrom(NetworkLayer *layer) {
 			}
 
 			_maxColumns = 1;
-			updateLayout();
-
-			setEnabled(true);
 			break;
 		}
 
@@ -334,27 +329,30 @@ void NetworkLayerLegend::updateFrom(NetworkLayer *layer) {
 
 				for ( ; it != gradient->end(); ++it ) {
 					lastValue = it.key();
-					if ( currentTag.isEmpty() )
+
+					if ( currentTag.isEmpty() ) {
 						_items.append(QPair<QString, QColor>(QString("< %1").arg(lastValue), currentColor));
-					else
+					}
+					else {
 						_items.append(QPair<QString, QColor>(currentTag, currentColor));
+					}
+
 					currentColor = it.value().first;
 					currentTag = it.value().second;
 				}
 
-				if ( currentTag.isEmpty() )
+				if ( currentTag.isEmpty() ) {
 					_items.append(QPair<QString, QColor>(QString(">= %1").arg(lastValue), currentColor));
-				else
+				}
+				else {
 					_items.append(QPair<QString, QColor>(currentTag, currentColor));
+				}
 
 				if ( gradient->unsetColor.isValid() ) {
 					_items.append(QPair<QString, QColor>(tr("Unset"), gradient->unsetColor));
 				}
 
 				_maxColumns = 1;
-				updateLayout();
-
-				setEnabled(true);
 				break;
 			}
 			// Fall through to default case
@@ -365,6 +363,12 @@ void NetworkLayerLegend::updateFrom(NetworkLayer *layer) {
 			setEnabled(false);
 			_items.clear();
 			break;
+	}
+
+	if ( !_items.empty() ) {
+		_items.append(QPair<QString, QColor>(tr("Disabled"), SCScheme.colors.stations.disabled));
+		updateLayout();
+		setEnabled(true);
 	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

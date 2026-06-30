@@ -75,7 +75,7 @@ void drawWarningSymbol(QPainter &painter, const QPoint &lowerLeft, const QPixmap
 }
 
 
-NetworkLayerGradient *currentGradient = nullptr;
+const NetworkLayerGradient *currentGradient = nullptr;
 
 
 }
@@ -563,6 +563,18 @@ void NetworkLayer::setColorMode(ColorMode mode, bool force) {
 	}
 
 	_colorMode = mode;
+	currentGradient = nullptr;
+
+	switch ( _colorMode ) {
+		case GroundMotion:
+			currentGradient = &_gmGradient;
+			break;
+		case QC:
+			currentGradient = qcGradient();
+			break;
+		default:
+			break;
+	}
 
 	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
 		updateColor(s);
@@ -1071,8 +1083,6 @@ bool NetworkLayer::filterMouseDoubleClickEvent(QMouseEvent *, const QPointF &) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void NetworkLayer::updateColor(NetworkLayerSymbol *symbol) {
-	currentGradient = nullptr;
-
 	bool enabled = true;
 
 	symbol->setState(Settings::OK);
@@ -1110,22 +1120,11 @@ void NetworkLayer::updateColor(NetworkLayerSymbol *symbol) {
 			}
 
 			case GroundMotion:
-			{
-				currentGradient = &_gmGradient;
-
-				auto data = symbol->data();
-				symbol->setColorFromValue(data->maximumAmplitude);
-
+				symbol->setColorFromValue(symbol->data()->maximumAmplitude);
 				break;
-			}
 
 			case QC:
 			{
-				auto git = _qcGradients.find(_activeQCParameter);
-				if ( git != _qcGradients.end() ) {
-					currentGradient = &git.value();
-				}
-
 				auto data = symbol->data();
 				auto dit = data->qc.find(_activeQCParameter);
 				if ( dit != data->qc.end() ) {
@@ -1134,7 +1133,6 @@ void NetworkLayer::updateColor(NetworkLayerSymbol *symbol) {
 				else {
 					symbol->setColorFromValue(-1);
 				}
-
 				break;
 			}
 

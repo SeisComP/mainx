@@ -47,11 +47,31 @@ class StationInfoDialog : public QDialog {
 		void processingDataUpdated(const Settings::StationData *stationData);
 		void shiftData();
 
+		//! Adds a single pick marker to the unfiltered trace (used for
+		//! real-time updates from messaging).
+		void addPick(DataModel::Pick *pick);
+
+	signals:
+		//! Emitted when the user toggles the station's enabled state via the
+		//! Enable/Disable button.
+		void setStationEnabled(bool enable);
+
+	private:
+		//! Refreshes the status label and the Enable/Disable button from the
+		//! current enabled state.
+		void updateEnabledUi();
+
+		//! Adds a marker on the unfiltered trace for every stored pick, using
+		//! the scheme pick colors, phase labels and line style (like scrttv).
+		void addPickMarkers(const Settings::StationData *stationData);
+
 	private:
 		Ui::StationInfoDialog  _ui;
 		Gui::RecordWidget     *_trace[2];
 		Gui::TimeScale        *_timeScale;
 		Gui::VRuler           *_scale[2];
+		bool                   _hasData{false};
+		bool                   _enabled{false};
 };
 
 

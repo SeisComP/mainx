@@ -33,6 +33,8 @@
 #include <QMenu>
 #include <QMouseEvent>
 
+#include <algorithm>
+
 #include "eventlayer.h"
 
 
@@ -332,15 +334,55 @@ bool EventLayer::filterMousePressEvent(QMouseEvent *, const QPointF &) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool EventLayer::filterMouseReleaseEvent(QMouseEvent *event, const QPointF &) {
+	if ( _clickSuppressed )
+		return false;
+
 	if ( _hoverId.empty() )
 		return false;
 
-	if ( event->button() == Qt::LeftButton ) {
-		emit eventSelected(_hoverId);
-		return true;
+	if ( event->button() != Qt::LeftButton )
+		return false;
+
+	// A single event here; overlapping events are resolved by the map
+	// widget's chooser.
+	selectEvent(_hoverId);
+
+	return true;
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void EventLayer::selectEvent(const std::string &eventID) {
+	emit eventSelected(eventID);
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+std::vector<std::string> EventLayer::eventsUnder(int x, int y) const {
+	std::vector<std::string> result;
+
+	auto it = _eventSymbols.end();
+	while ( it != _eventSymbols.begin() ) {
+		--it;
+		const auto &symbol = it.value();
+		if ( symbol.origin->isClipped() || !symbol.origin->isVisible() ) {
+			continue;
+		}
+		if ( symbol.origin->isInside(x, y) ) {
+			result.push_back(it.key());
+		}
 	}
 
-	return false;
+	// Sort alphabetically by public ID.
+	std::sort(result.begin(), result.end());
+
+	return result;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

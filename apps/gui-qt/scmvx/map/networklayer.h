@@ -30,6 +30,9 @@
 #include <seiscomp/gui/map/layer.h>
 
 #include <map>
+#include <set>
+
+#include <QStringList>
 
 #include "../settings.h"
 #include "stationsymbol.h"
@@ -84,6 +87,11 @@ class NetworkLayerSymbol : public StationSymbol {
 		void setState(Settings::State state) { _state = state; }
 		Settings::State state() const { return _state; }
 
+		//! Marks a station whose epoch/streams are closed before the
+		//! reference time. Such stations are rendered with a cross.
+		void setClosed(bool closed) { _closed = closed; }
+		bool isClosed() const { return _closed; }
+
 		void calculateMapPosition(const Seiscomp::Gui::Map::Canvas *canvas) override;
 		void customDraw(const Seiscomp::Gui::Map::Canvas *canvas, QPainter& painter) override;
 
@@ -91,8 +99,9 @@ class NetworkLayerSymbol : public StationSymbol {
 	private:
 		Seiscomp::Gui::Map::AnnotationItem *_annotation;
 		DataModel::Station                 *_model;
-		Settings::StationData              *_data;
+		Settings::StationData              *_data{nullptr};
 		bool                                _selected;
+		bool                                _closed{false};
 		double                              _value;
 		QColor                              _color;
 		NetworkLayer                       *_layer;
@@ -199,6 +208,58 @@ class NetworkLayer : public Gui::Map::Layer {
 
 		void setStationsVisible(QSet<const DataModel::Station *> *);
 
+		//! Returns the sorted, distinct network codes of all known stations.
+		QStringList networkCodes() const;
+
+		//! Whether stations of the given network are currently selected for
+		//! display.
+		bool isNetworkVisible(const QString &code) const;
+
+		//! Total number of currently visible stations.
+		int visibleStationCount() const;
+
+		//! Number of currently visible stations in each export category.
+		int closedStationCount() const;
+		int unboundStationCount() const;
+		int mismatchStationCount() const;
+		int noDetecStreamStationCount() const;
+		int disabledStationCount() const;
+		int enabledStationCount() const;
+
+		//! Newline-separated "networkCode.stationCode" list of the currently
+		//! visible stations in each export category.
+		QString closedStationList() const;
+		QString unboundStationList() const;
+		QString mismatchStationList() const;
+		QString noDetecStreamStationList() const;
+		QString disabledStationList() const;
+		QString enabledStationList() const;
+
+		//! Looks up the geographic location (longitude, latitude) of the
+		//! station identified by "networkCode.stationCode". Returns false when
+		//! no such station is known.
+		bool stationLocation(const QString &netSta, QPointF &location) const;
+
+		//! Selects or deselects a network for display, updating the map
+		//! immediately.
+		void setNetworkVisible(const QString &code, bool visible);
+
+		//! Returns the visible station symbols under the given widget
+		//! position, topmost first.
+		QVector<NetworkLayerSymbol*> symbolsUnder(int x, int y) const;
+
+		//! The station symbol currently under the cursor and the most recently
+		//! selected one (used to highlight the chooser entry).
+		NetworkLayerSymbol *currentSymbol() const { return _currentSymbol; }
+		NetworkLayerSymbol *selectedSymbol() const { return _selectedSymbol; }
+
+		//! Selects the given station and requests its information window.
+		void selectStation(NetworkLayerSymbol *symbol);
+
+		//! While suppressed, a release click is ignored (used when a combined
+		//! station/event chooser is shown instead).
+		void setClickSuppressed(bool suppressed) { _clickSuppressed = suppressed; }
+
 		Gui::Map::Legend *mainLegend() const;
 
 		void updateStation(const std::string &staID);
@@ -239,6 +300,13 @@ class NetworkLayer : public Gui::Map::Layer {
 		void setShowUnbound(bool enable);
 
 		/**
+		 * @brief Sets if stations should be shown whose streams are all
+		 *        closed before the current time. Disabled by default.
+		 * @param enable The visibility state
+		 */
+		void setShowClosed(bool enable);
+
+		/**
 		 * @brief Updates the internal render state for each station symbol.
 		 */
 		void tick();
@@ -272,6 +340,14 @@ class NetworkLayer : public Gui::Map::Layer {
 		void disposeSymbols();
 		void updateColor(NetworkLayerSymbol *symbol);
 
+		//! Recomputes a single symbol's visibility from all active filters
+		//! (network selection, closed and unbound toggles).
+		void updateSymbolVisibility(NetworkLayerSymbol *s) const;
+
+		//! Closed stations are only shown on the Network tab and only when
+		//! the "show closed" toggle is enabled.
+		bool closedStationsVisible() const { return _showClosed && (_colorMode == Network); }
+
 
 	// ----------------------------------------------------------------------
 	//  Private members
@@ -283,6 +359,8 @@ class NetworkLayer : public Gui::Map::Layer {
 		bool                                     _showChannelCodes;
 		bool                                     _showIssues;
 		bool                                     _showUnbound{true};
+		bool                                     _showClosed{false};
+		std::set<std::string>                    _hiddenNetworks;
 		ColorMode                                _colorMode;
 		std::string                              _activeQCParameter;
 		Symbols                                  _stationSymbols;
@@ -290,6 +368,8 @@ class NetworkLayer : public Gui::Map::Layer {
 		StationSymbolMap                         _stationSymbolLookup;
 		NetworkLayerSymbol                      *_currentSymbol;
 		NetworkLayerSymbol                      *_currentClickSymbol;
+		NetworkLayerSymbol                      *_selectedSymbol{nullptr};
+		bool                                     _clickSuppressed{false};
 		NetworkLayerLegend                      *_legend;
 		NetworkLayerGradient                     _gmGradient;
 		QMap<std::string, NetworkLayerGradient>  _qcGradients;

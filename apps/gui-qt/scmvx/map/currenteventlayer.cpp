@@ -26,6 +26,7 @@
 #include <seiscomp/datamodel/utils.h>
 
 #include <QApplication>
+#include <QMouseEvent>
 
 #include "currenteventlayer.h"
 
@@ -119,9 +120,12 @@ CurrentEventLayer::CurrentEventLayer(QObject* parent)
 void CurrentEventLayer::setEvent(Event *evt) {
 	_isValid = evt != nullptr;
 	if ( !_isValid ) {
+		_eventID.clear();
 		emit updateRequested();
 		return;
 	}
+
+	_eventID = evt->publicID();
 
 	auto *mag = Magnitude::Find(evt->preferredMagnitudeID());
 	if ( mag ) {
@@ -219,8 +223,27 @@ void CurrentEventLayer::calculateMapPosition(const Map::Canvas *canvas) {}
 
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-bool CurrentEventLayer::isInside(const QMouseEvent *event, const QPointF &geoPos) {
-	return false;
+bool CurrentEventLayer::isInside(const QMouseEvent *event, const QPointF &) {
+	if ( !_isValid ) {
+		return false;
+	}
+
+	QRect box(9, 9, _size.width(), _headerHeight + _size.height());
+	return box.contains(event->pos());
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+bool CurrentEventLayer::filterMouseReleaseEvent(QMouseEvent *event, const QPointF &) {
+	if ( event->button() != Qt::LeftButton || _eventID.empty() ) {
+		return false;
+	}
+
+	emit clicked(_eventID);
+	return true;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

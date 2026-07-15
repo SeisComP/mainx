@@ -36,6 +36,7 @@
 #include <QTimer>
 
 #include "ui_mainwindow.h"
+#include "mapwidget.h"
 #include "settings.h"
 
 
@@ -64,6 +65,16 @@ class MainWindow : public Gui::MainWindow {
 		              DataModel::WaveformQuality *wfq);
 		void updateGroundMotion(Settings::StationData *data);
 		void updateStation(DataModel::ConfigStation *cs, DataModel::Operation op);
+
+		//! Returns the config-module station configuration for the given
+		//! network/station code, or nullptr if none exists.
+		DataModel::ConfigStation *configStation(const std::string &net,
+		                                        const std::string &sta) const;
+
+		//! Enables or disables a station: updates the local state and map and
+		//! sends the change to the CONFIG message group as a notifier.
+		void setStationEnabled(const std::string &net, const std::string &sta,
+		                       bool enable);
 
 
 	protected:
@@ -118,6 +129,24 @@ class MainWindow : public Gui::MainWindow {
 		void showMapCoordinates(const QPoint &pos);
 		void sendArtificialOrigin(const QPoint &pos);
 
+		//! Builds the per-network visibility selection menu (checkboxes plus
+		//! select all / unselect all).
+		void populateNetworksMenu(QMenu *menu);
+
+		//! Builds the stations-status menu (one category submenu each with a
+		//! count and copy/save actions).
+		void populateStationsStatusMenu(QMenu *menu);
+		void addStationsStatusMenu(QMenu *menu, const QString &label, int count,
+		                         const QString &saveTitle, const QString &defaultName,
+		                         const QString &content);
+
+		//! Fills a submenu with a scrollable, clickable list of the given
+		//! "networkCode.stationCode" stations; clicking one centers the map.
+		void populateStationSearchMenu(QMenu *menu, const QString &content);
+		void copyStationsToClipboard(const QString &content);
+		void saveStationsToFile(const QString &title, const QString &content,
+		                        const QString &defaultName);
+
 
 	private:
 		typedef DataModel::PublicObjectRingBuffer ObjectCache;
@@ -142,7 +171,7 @@ class MainWindow : public Gui::MainWindow {
 
 		Ui::MainWindow                 _ui;
 		QTimer                         _updateTimer;
-		Gui::MapWidget                *_mapWidget;
+		MapWidget                     *_mapWidget;
 		Gui::EventListView            *_eventListView;
 		NetworkLayer                  *_networkLayer;
 		Gui::Map::AnnotationLayer     *_annotationLayer;

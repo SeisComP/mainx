@@ -32,6 +32,8 @@ namespace Seiscomp::MapViewX {
 
 
 class CurrentEventLayer : public Gui::Map::Layer {
+	Q_OBJECT
+
 	// ----------------------------------------------------------------------
 	//  X'truction
 	// ----------------------------------------------------------------------
@@ -57,6 +59,15 @@ class CurrentEventLayer : public Gui::Map::Layer {
 		void draw(const Gui::Map::Canvas *, QPainter &) override;
 		void calculateMapPosition(const Gui::Map::Canvas *canvas) override;
 		bool isInside(const QMouseEvent *event, const QPointF &geoPos) override;
+		bool filterMouseReleaseEvent(QMouseEvent *event, const QPointF &geoPos) override;
+
+
+	// ----------------------------------------------------------------------
+	//  Signals
+	// ----------------------------------------------------------------------
+	signals:
+		//! Emitted when the "Latest event" box is clicked.
+		void clicked(const std::string &eventID);
 
 
 	// ----------------------------------------------------------------------
@@ -64,6 +75,7 @@ class CurrentEventLayer : public Gui::Map::Layer {
 	// ----------------------------------------------------------------------
 	private:
 		bool            _isValid;
+		std::string     _eventID;
 		QSize           _size;
 		QSize           _magSize;
 		int             _headerHeight;

@@ -30,6 +30,8 @@
 
 #include <QMap>
 
+#include <vector>
+
 
 namespace Seiscomp::MapViewX {
 
@@ -58,6 +60,21 @@ class EventLayer : public Seiscomp::Gui::Backport::EventLayer {
 		 */
 		void setCurrentEvent(DataModel::Event *evt);
 		int eventCount() const;
+
+		//! Returns the public IDs of the visible events under the given widget
+		//! position, topmost first.
+		std::vector<std::string> eventsUnder(int x, int y) const;
+
+		//! Requests the event details window for the given event.
+		void selectEvent(const std::string &eventID);
+
+		//! The public ID of the event currently under the cursor (used to
+		//! highlight the chooser entry).
+		const std::string &hoveredId() const { return _hoverId; }
+
+		//! While suppressed, a release click is ignored (used when a combined
+		//! station/event chooser is shown instead).
+		void setClickSuppressed(bool suppressed) { _clickSuppressed = suppressed; }
 
 
 	// ----------------------------------------------------------------------
@@ -105,6 +122,7 @@ class EventLayer : public Seiscomp::Gui::Backport::EventLayer {
 	protected:
 		Gui::OriginSymbol            *_currentEvent;
 		DataModel::PublicObjectCache *_cache;
+		bool                          _clickSuppressed{false};
 };
 
 

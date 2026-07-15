@@ -25,11 +25,13 @@
 #include <seiscomp/datamodel/station.h>
 #include <seiscomp/datamodel/stream.h>
 #include <seiscomp/datamodel/waveformquality.h>
+#include <seiscomp/datamodel/pick.h>
 #include <seiscomp/system/application.h>
 #include <seiscomp/utils/bindings.h>
 
 #include <QRectF>
 #include <map>
+#include <vector>
 
 #include "processor.h"
 
@@ -72,6 +74,8 @@ struct Settings : System::Application::AbstractSettings {
 			double                    maximumAmplitude{-1};
 
 			OPT(Core::Time)           triggerTime;
+
+			std::vector<DataModel::PickPtr>  picks;
 
 			bool                      enabled{false};
 			QCParameters              qc;

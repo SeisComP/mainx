@@ -35,6 +35,7 @@ SET(
 		map/eventheatlayer.h
 		map/networklayer.h
 		map/eventlayer.h
+		map/currenteventlayer.h
 		map/scalelayer.h
 		app.h
 		eventinfodialog.h

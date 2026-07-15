@@ -23,7 +23,11 @@
 
 
 #include <seiscomp/datamodel/event.h>
+#include <seiscomp/datamodel/magnitude.h>
+#include <seiscomp/datamodel/origin.h>
 #include <seiscomp/gui/core/inspector.h>
+
+#include <QLabel>
 
 #include "settings.h"
 #include "ui_eventinfodialog.h"
@@ -40,7 +44,9 @@ class EventInfoDialog : public QDialog {
 		explicit EventInfoDialog(QWidget *parent = 0, Qt::WindowFlags f = Qt::WindowFlags());
 
 	public:
-		void setEvent(const DataModel::Event *event);
+		void setEvent(const DataModel::Event *event,
+		              const DataModel::Origin *origin,
+		              const DataModel::Magnitude *magnitude);
 
 	private slots:
 		void showDetails();
@@ -49,6 +55,18 @@ class EventInfoDialog : public QDialog {
 		Ui::EventInfoDialog   _ui;
 		Gui::Inspector       *_inspector;
 		DataModel::EventCPtr  _event;
+
+		QLabel               *_regionLabel;
+		QLabel               *_timeLabel;
+		QLabel               *_latitudeLabel;
+		QLabel               *_longitudeLabel;
+		QLabel               *_depthLabel;
+		QLabel               *_magnitudeLabel;
+		QLabel               *_agencyLabel;
+		QLabel               *_evaluationLabel;
+		QLabel               *_eventTypeLabel;
+		QLabel               *_arrivalCountLabel;
+		QLabel               *_rmsLabel;
 };
 
 

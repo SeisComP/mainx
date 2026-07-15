@@ -19,7 +19,11 @@
 
 
 #include <seiscomp/datamodel/network.h>
+#include <seiscomp/datamodel/pick.h>
+#include <seiscomp/datamodel/sensorlocation.h>
+#include <seiscomp/datamodel/stream.h>
 #include <seiscomp/math/filter.h>
+#include <seiscomp/gui/core/application.h>
 #include <seiscomp/gui/core/compat.h>
 #include <seiscomp/gui/core/icon.h>
 
@@ -35,6 +39,46 @@ namespace MapViewX {
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+namespace {
+
+
+// Returns true if the station has streams and all stream epochs ended before
+// 'ref'. On success 'lastEnd' holds the most recent stream end time.
+bool allStreamsClosed(const DataModel::Station *sta, const Core::Time &ref,
+                      Core::Time &lastEnd) {
+	bool found = false;
+
+	for ( size_t l = 0; l < sta->sensorLocationCount(); ++l ) {
+		DataModel::SensorLocation *loc = sta->sensorLocation(l);
+		for ( size_t c = 0; c < loc->streamCount(); ++c ) {
+			Core::Time end;
+			try {
+				end = loc->stream(c)->end();
+			}
+			catch ( ... ) {
+				// Open-ended stream epoch
+				return false;
+			}
+
+			if ( ref < end ) {
+				// Stream epoch still open at the reference time
+				return false;
+			}
+
+			if ( !found || (lastEnd < end) ) {
+				lastEnd = end;
+				found = true;
+			}
+		}
+	}
+
+	return found;
+}
+
+
+}
+
+
 
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -43,6 +87,18 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
                                      QWidget *parent, Qt::WindowFlags f)
 : QDialog(parent, f) {
 	_ui.setupUi(this);
+
+	setWindowTitle(tr("Station information: %1.%2")
+	               .arg(station->network()->code().c_str())
+	               .arg(station->code().c_str()));
+
+	connect(_ui.buttonOK, &QPushButton::clicked, this, &QDialog::accept);
+
+	_ui.buttonToggleEnabled->setAutoDefault(false);
+	_ui.buttonToggleEnabled->setDefault(false);
+	_ui.buttonOK->setAutoDefault(true);
+	_ui.buttonOK->setDefault(true);
+	_ui.buttonOK->setFocus();
 
 	_timeScale = new Gui::TimeScale(this);
 	_timeScale->setAbsoluteTimeEnabled(true);
@@ -83,7 +139,7 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 	_trace[1]->enableRecordFiltering(2, true);
 	_trace[1]->setDrawMode(Gui::RecordWidget::Stacked);
 
-	if ( stationData->channel ) {
+	if ( stationData && stationData->channel ) {
 		_scale[0]->setAnnotation((stationData->channel->gainUnit() + " * 1E09").c_str());
 		_scale[1]->setAnnotation("M/S * 1E09");
 	}
@@ -122,7 +178,7 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 	_ui.frameTrace->setLayout(vl);
 
 	_ui.labelFilter->setText(global.filter.c_str());
-	if ( stationData->channel )
+	if ( stationData && stationData->channel )
 		_ui.labelCode->setText((station->network()->code() + "." + station->code() + "." +
 		                        stationData->channel->sensorLocation()->code() + "." +
 		                        stationData->channel->code()).c_str());
@@ -131,7 +187,13 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 	_ui.labelNetwork->setText(station->network()->description().c_str());
 	_ui.labelDescription->setText(station->description().c_str());
 
-	if ( stationData ) {
+	Core::Time lastEnd;
+	if ( allStreamsClosed(station, Core::Time::UTC(), lastEnd) ) {
+		_ui.labelIssueIcon->setPixmap(Gui::icon("close", QColor(192, 0, 0)).pixmap(fontMetrics().height() * 2));
+		_ui.labelIssueText->setText(tr("All streams from the station closed in the past. Last end time: %1")
+		                            .arg(lastEnd.toString("%F %T").c_str()));
+	}
+	else if ( stationData ) {
 		QIcon icon;
 
 		switch ( stationData->state ) {
@@ -186,6 +248,91 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 		_ui.labelIssueIcon->setPixmap(Gui::pixmap(this, "question", Qt::darkGray, 2.0));
 		_ui.labelIssueText->setText(tr("The station is unknown to the system."));
 	}
+
+	_hasData = stationData != nullptr;
+	_enabled = stationData && stationData->enabled;
+	updateEnabledUi();
+
+	if ( stationData ) {
+		addPickMarkers(stationData);
+	}
+
+	connect(_ui.buttonToggleEnabled, &QPushButton::clicked, this, [this]() {
+		if ( !_hasData ) {
+			return;
+		}
+
+		_enabled = !_enabled;
+		updateEnabledUi();
+		emit setStationEnabled(_enabled);
+	});
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void StationInfoDialog::updateEnabledUi() {
+	if ( !_hasData ) {
+		_ui.labelStatus->setText(tr("-"));
+		_ui.buttonToggleEnabled->setEnabled(false);
+		return;
+	}
+
+	_ui.labelStatus->setText(_enabled ? tr("Enabled") : tr("Disabled"));
+	_ui.buttonToggleEnabled->setText(_enabled ? tr("Disable") : tr("Enable"));
+	_ui.buttonToggleEnabled->setToolTip(_enabled ? tr("Disable this station")
+	                                             : tr("Enable this station"));
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void StationInfoDialog::addPickMarkers(const Settings::StationData *stationData) {
+	for ( const DataModel::PickPtr &pick : stationData->picks ) {
+		addPick(pick.get());
+	}
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void StationInfoDialog::addPick(DataModel::Pick *pick) {
+	Gui::RecordMarker *marker =
+		new Gui::RecordMarker(nullptr, pick->time().value());
+
+	QString phaseCode;
+	try {
+		phaseCode = pick->phaseHint().code().c_str();
+	}
+	catch ( ... ) {}
+	marker->setText(phaseCode);
+	marker->setMovable(false);
+
+	try {
+		switch ( pick->evaluationMode() ) {
+			case DataModel::AUTOMATIC:
+				marker->setColor(SCScheme.colors.picks.automatic);
+				break;
+			case DataModel::MANUAL:
+				marker->setColor(SCScheme.colors.picks.manual);
+				break;
+			default:
+				marker->setColor(SCScheme.colors.picks.undefined);
+				break;
+		}
+	}
+	catch ( ... ) {
+		marker->setColor(SCScheme.colors.picks.undefined);
+	}
+
+	_trace[0]->addMarker(marker);
+	_trace[0]->update();
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

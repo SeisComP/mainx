@@ -110,6 +110,7 @@
     <addaction name="actionShowMapLegend"/>
     <addaction name="actionShowStationIssues"/>
     <addaction name="actionShowUnboundStations"/>
+    <addaction name="actionShowClosedStations"/>
     <addaction name="actionShowStationAnnotations"/>
     <addaction name="actionOpenEventTable"/>
     <addaction name="actionShowChannelCodes"/>
@@ -220,6 +221,17 @@
    </property>
    <property name="shortcut">
     <string>Shift+F8</string>
+   </property>
+  </action>
+  <action name="actionShowClosedStations">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Show closed stations</string>
    </property>
   </action>
   <action name="actionQCDelay">

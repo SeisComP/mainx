@@ -23,6 +23,14 @@
 #include <seiscomp/gui/core/icon.h>
 #include <seiscomp/gui/map/canvas.h>
 
+#include <seiscomp/datamodel/sensorlocation.h>
+#include <seiscomp/datamodel/stream.h>
+
+#include <QApplication>
+#include <QSet>
+#include <QStringList>
+#include <QVector>
+
 #include <algorithm>
 
 #include "networklayer.h"
@@ -55,6 +63,51 @@ typedef QVector<Row> Grid;
 
 bool topToBottom(const NetworkLayerSymbol *s1, const NetworkLayerSymbol *s2) {
 	return s1->latitude() > s2->latitude();
+}
+
+
+/**
+ * @brief Checks whether a station is no longer operating.
+ *
+ * A station qualifies if all of its stream epochs ended before the reference
+ * time, i.e. the last stream epoch is closed. This applies to configured and
+ * unconfigured stations alike. Stations without any stream are not considered.
+ */
+bool isClosedStation(DataModel::Station *sta, const Core::Time &refTime) {
+	bool hasStream = false;
+
+	for ( size_t l = 0; l < sta->sensorLocationCount(); ++l ) {
+		DataModel::SensorLocation *loc = sta->sensorLocation(l);
+		for ( size_t c = 0; c < loc->streamCount(); ++c ) {
+			hasStream = true;
+			try {
+				if ( refTime < loc->stream(c)->end() ) {
+					// Stream epoch still open at the reference time
+					return false;
+				}
+			}
+			catch ( ... ) {
+				// Open-ended stream epoch
+				return false;
+			}
+		}
+	}
+
+	return hasStream;
+}
+
+
+void drawClosedMarker(QPainter &painter, const QPoint &lowerLeft, int size) {
+	static QColor crossColor(192, 0, 0);
+	size = size / 2; // 50% of the issue-indicator size
+	int radius = size * 75 / 100;
+	QPoint center = lowerLeft + QPoint(radius, -radius);
+	painter.save();
+	painter.setRenderHint(QPainter::Antialiasing, true);
+	painter.setPen(QPen(crossColor, qMax(2, size / 5), Qt::SolidLine, Qt::RoundCap));
+	painter.drawLine(center + QPoint(-radius, -radius), center + QPoint(radius, radius));
+	painter.drawLine(center + QPoint(-radius, radius), center + QPoint(radius, -radius));
+	painter.restore();
 }
 
 
@@ -513,7 +566,7 @@ NetworkLayer::~NetworkLayer() {
 void NetworkLayer::updateAnnotations() {
 	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
 		DataModel::Station *sta = s->model();
-		if ( _showChannelCodes && s->data()->channel ) {
+		if ( _showChannelCodes && s->data() && s->data()->channel ) {
 			s->setAnnotation(
 				(
 					sta->network()->code() + "." + sta->code() + "." +
@@ -545,6 +598,7 @@ void NetworkLayer::disposeSymbols() {
 	_stationSymbolLookup.clear();
 	_currentSymbol = nullptr;
 	_currentClickSymbol = nullptr;
+	_selectedSymbol = nullptr;
 
 	// Remove link to global array
 	for ( auto & [model, data] : global.stationConfig ) {
@@ -578,6 +632,9 @@ void NetworkLayer::setColorMode(ColorMode mode, bool force) {
 
 	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
 		updateColor(s);
+		if ( s->isClosed() ) {
+			s->setVisible(closedStationsVisible());
+		}
 	}
 
 	_legend->updateFrom(this);
@@ -594,6 +651,7 @@ void NetworkLayer::setInventory(DataModel::Inventory *inv,
                                 Gui::Map::Annotations *annotations,
                                 const Core::Time *time) {
 	disposeSymbols();
+	_hiddenNetworks.clear();
 
 	if ( !inv ) {
 		return;
@@ -619,8 +677,13 @@ void NetworkLayer::setInventory(DataModel::Inventory *inv,
 				continue;
 			}
 
+			// A station whose epoch is closed is normally not shown. It is
+			// still shown when its last stream epoch is closed - regardless
+			// of configuration - but marked as closed (rendered with a cross).
+			bool closed = isClosedStation(sta, refTime);
+
 			try {
-				if ( sta->end() <= refTime ) {
+				if ( (sta->end() <= refTime) && !closed ) {
 					continue;
 				}
 			}
@@ -645,6 +708,10 @@ void NetworkLayer::setInventory(DataModel::Inventory *inv,
 			NetworkLayerSymbol *symbol = new NetworkLayerSymbol(this, sta, annotations->add(QString()));
 			symbol->setPenWidth(defaultFrameWidth);
 			symbol->setLocation(lat, lon);
+			symbol->setClosed(closed);
+			if ( closed && !closedStationsVisible() ) {
+				symbol->setVisible(false);
+			}
 			updateColor(symbol);
 
 			_stationSymbolLookup[staID] = symbol;
@@ -719,23 +786,10 @@ void NetworkLayer::setActiveQCParameter(const std::string &param) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void NetworkLayer::setStationsVisible(QSet<const DataModel::Station*> *set) {
-	if ( set ) {
-		foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
-			s->setDefaultVisibility();
-			if ( !_showUnbound && (s->state() == Settings::Unconfigured) ) {
-				s->setVisible(false);
-			}
-			if ( !set->contains(s->model()) ) {
-				s->setVisible(false);
-			}
-		}
-	}
-	else {
-		foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
-			s->setDefaultVisibility();
-			if ( !_showUnbound && (s->state() == Settings::Unconfigured) ) {
-				s->setVisible(false);
-			}
+	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
+		updateSymbolVisibility(s);
+		if ( set && !set->contains(s->model()) ) {
+			s->setVisible(false);
 		}
 	}
 }
@@ -781,10 +835,261 @@ void NetworkLayer::setShowUnbound(bool enable) {
 	_showUnbound = enable;
 
 	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
-		s->setVisible(_showUnbound || (s->state() != Settings::Unconfigured));
+		updateSymbolVisibility(s);
 	}
 
 	emit updateRequested(Position);
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void NetworkLayer::setShowClosed(bool enable) {
+	if ( _showClosed == enable ) {
+		return;
+	}
+	_showClosed = enable;
+
+	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
+		updateSymbolVisibility(s);
+	}
+
+	emit updateRequested(Position);
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+namespace {
+
+template <typename Accept>
+QString buildStationList(const QVector<NetworkLayerSymbol*> &symbols, Accept accept) {
+	QStringList lines;
+
+	foreach ( NetworkLayerSymbol *s, symbols ) {
+		if ( !s->isVisible() || !accept(s) ) {
+			continue;
+		}
+
+		DataModel::Station *sta = s->model();
+		lines << QString("%1.%2").arg(sta->network()->code().c_str(),
+		                              sta->code().c_str());
+	}
+
+	lines.sort();
+	lines.removeDuplicates();
+
+	return lines.join('\n');
+}
+
+
+int stationListCount(const QString &list) {
+	return list.isEmpty() ? 0 : list.count('\n') + 1;
+}
+
+}
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+QString NetworkLayer::closedStationList() const {
+	return buildStationList(_stationSymbols,
+	                        [](const NetworkLayerSymbol *s) { return s->isClosed(); });
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+QString NetworkLayer::unboundStationList() const {
+	return buildStationList(_stationSymbols,
+	                        [](const NetworkLayerSymbol *s) { return s->state() == Settings::Unconfigured; });
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+QString NetworkLayer::mismatchStationList() const {
+	return buildStationList(_stationSymbols,
+	                        [](const NetworkLayerSymbol *s) {
+	                        	return (s->state() == Settings::NoPrimaryStream)
+	                        	    || (s->state() == Settings::NoChannelGroupMetaData)
+	                        	    || (s->state() == Settings::NoVerticalChannelMetaData);
+	                        });
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+QString NetworkLayer::noDetecStreamStationList() const {
+	return buildStationList(_stationSymbols,
+	                        [](const NetworkLayerSymbol *s) { return s->state() == Settings::NoPrimaryStream; });
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+QString NetworkLayer::disabledStationList() const {
+	return buildStationList(_stationSymbols,
+	                        [](const NetworkLayerSymbol *s) {
+	                        	return s->data() && !s->data()->enabled;
+	                        });
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+QString NetworkLayer::enabledStationList() const {
+	return buildStationList(_stationSymbols,
+	                        [](const NetworkLayerSymbol *s) {
+	                        	return s->data() && s->data()->enabled;
+	                        });
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+bool NetworkLayer::stationLocation(const QString &netSta, QPointF &location) const {
+	auto it = _stationSymbolLookup.find(netSta.toStdString());
+	if ( it == _stationSymbolLookup.end() ) {
+		return false;
+	}
+
+	DataModel::Station *sta = it->second->model();
+	try {
+		location = QPointF(sta->longitude(), sta->latitude());
+	}
+	catch ( ... ) {
+		return false;
+	}
+
+	return true;
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+int NetworkLayer::visibleStationCount() const {
+	int count = 0;
+	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
+		if ( s->isVisible() ) {
+			++count;
+		}
+	}
+	return count;
+}
+
+int NetworkLayer::closedStationCount() const {
+	return stationListCount(closedStationList());
+}
+
+int NetworkLayer::unboundStationCount() const {
+	return stationListCount(unboundStationList());
+}
+
+int NetworkLayer::mismatchStationCount() const {
+	return stationListCount(mismatchStationList());
+}
+
+int NetworkLayer::noDetecStreamStationCount() const {
+	return stationListCount(noDetecStreamStationList());
+}
+
+int NetworkLayer::disabledStationCount() const {
+	return stationListCount(disabledStationList());
+}
+
+int NetworkLayer::enabledStationCount() const {
+	return stationListCount(enabledStationList());
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+QStringList NetworkLayer::networkCodes() const {
+	QSet<QString> codes;
+	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
+		codes.insert(s->model()->network()->code().c_str());
+	}
+
+	QStringList list = codes.values();
+	list.sort();
+	return list;
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+bool NetworkLayer::isNetworkVisible(const QString &code) const {
+	return _hiddenNetworks.find(code.toStdString()) == _hiddenNetworks.end();
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void NetworkLayer::setNetworkVisible(const QString &code, bool visible) {
+	std::string c = code.toStdString();
+	if ( visible ) {
+		_hiddenNetworks.erase(c);
+	}
+	else {
+		_hiddenNetworks.insert(c);
+	}
+
+	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
+		if ( s->model()->network()->code() == c ) {
+			updateSymbolVisibility(s);
+		}
+	}
+
+	emit updateRequested();
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void NetworkLayer::updateSymbolVisibility(NetworkLayerSymbol *s) const {
+	s->setDefaultVisibility();
+	if ( !s->isVisible() ) {
+		return;
+	}
+
+	if ( _hiddenNetworks.find(s->model()->network()->code()) != _hiddenNetworks.end() ) {
+		s->setVisible(false);
+		return;
+	}
+
+	if ( s->isClosed() && !closedStationsVisible() ) {
+		s->setVisible(false);
+		return;
+	}
+
+	if ( (s->state() == Settings::Unconfigured) && !_showUnbound ) {
+		s->setVisible(false);
+	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -888,7 +1193,7 @@ bool NetworkLayer::isInside(const QMouseEvent *event, const QPointF &geoPos) {
 
 	while ( it != _stationSymbols.begin() ) {
 		--it;
-		if ( (*it)->isInside(x, y) ) {
+		if ( (*it)->isVisible() && (*it)->isInside(x, y) ) {
 			_isInsideSymbol = *it;
 			return true;
 		}
@@ -933,7 +1238,11 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 
 			s->draw(canvas, p);
 
-			if ( showIssues && (s->state() != Settings::OK) ) {
+			if ( s->isClosed() ) {
+				drawClosedMarker(p, s->pos() + QPoint(0, -s->width() / 2), p.fontMetrics().height());
+			}
+
+			if ( showIssues && (s->state() != Settings::OK) && !s->isClosed() ) {
 				QPoint lowerLeft = s->pos() + QPoint(0, -s->width() / 2);
 
 				static OPT(QPixmap) pmQuestion, pmWrench, pmUnlink, pmDatabase;
@@ -1047,19 +1356,69 @@ bool NetworkLayer::filterMousePressEvent(QMouseEvent *, const QPointF &) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool NetworkLayer::filterMouseReleaseEvent(QMouseEvent *, const QPointF &) {
-	if ( _currentClickSymbol ) {
-		if ( _currentClickSymbol == _currentSymbol ) {
-			_currentClickSymbol = nullptr;
-			// This is a click on a symbol
-			emit stationClicked(_currentSymbol->model());
-		}
-		else
-			_currentClickSymbol = nullptr;
-
-		return true;
+	if ( _clickSuppressed ) {
+		_currentClickSymbol = nullptr;
+		return false;
 	}
 
-	return false;
+	if ( !_currentClickSymbol ) {
+		return false;
+	}
+
+	bool sameSymbol = (_currentClickSymbol == _currentSymbol);
+	_currentClickSymbol = nullptr;
+	if ( sameSymbol ) {
+		// A single symbol here; overlapping symbols are resolved by the map
+		// widget's chooser.
+		selectStation(_currentSymbol);
+	}
+
+	return true;
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void NetworkLayer::selectStation(NetworkLayerSymbol *symbol) {
+	if ( !symbol ) {
+		return;
+	}
+
+	_selectedSymbol = symbol;
+	emit stationClicked(symbol->model());
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+QVector<NetworkLayerSymbol*> NetworkLayer::symbolsUnder(int x, int y) const {
+	QVector<NetworkLayerSymbol*> result;
+
+	auto it = _stationSymbols.end();
+	while ( it != _stationSymbols.begin() ) {
+		--it;
+		NetworkLayerSymbol *s = *it;
+		if ( s->isVisible() && s->isInside(x, y) ) {
+			result.append(s);
+		}
+	}
+
+	// Sort alphabetically by network then station code.
+	std::sort(result.begin(), result.end(),
+	          [](const NetworkLayerSymbol *a, const NetworkLayerSymbol *b) {
+	          	const std::string &na = a->model()->network()->code();
+	          	const std::string &nb = b->model()->network()->code();
+	          	if ( na != nb ) {
+	          		return na < nb;
+	          	}
+	          	return a->model()->code() < b->model()->code();
+	          });
+
+	return result;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -1087,13 +1446,17 @@ void NetworkLayer::updateColor(NetworkLayerSymbol *symbol) {
 
 	symbol->setState(Settings::OK);
 	auto it  = global.stationConfig.find(symbol->model());
-	if ( it == global.stationConfig.end() ) {
-		symbol->setState(Settings::Unknown);
-	}
-	else {
+	if ( it != global.stationConfig.end() ) {
 		const Settings::StationData *data = it->second.get();
-		symbol->setState(data->state);
+		// Closed stations keep the OK state so the cross stays their only
+		// marker and no issue icon is stacked on top of it.
+		if ( !symbol->isClosed() ) {
+			symbol->setState(data->state);
+		}
 		enabled = data->enabled;
+	}
+	else if ( !symbol->isClosed() ) {
+		symbol->setState(Settings::Unknown);
 	}
 
 	if ( enabled ) {
@@ -1120,15 +1483,15 @@ void NetworkLayer::updateColor(NetworkLayerSymbol *symbol) {
 			}
 
 			case GroundMotion:
-				symbol->setColorFromValue(symbol->data()->maximumAmplitude);
+				symbol->setColorFromValue(symbol->data() ? symbol->data()->maximumAmplitude : -1);
 				break;
 
 			case QC:
 			{
 				auto data = symbol->data();
-				auto dit = data->qc.find(_activeQCParameter);
-				if ( dit != data->qc.end() ) {
-					symbol->setColorFromValue(dit->second->value());
+				if ( data ) {
+					auto dit = data->qc.find(_activeQCParameter);
+					symbol->setColorFromValue(dit != data->qc.end() ? dit->second->value() : -1);
 				}
 				else {
 					symbol->setColorFromValue(-1);

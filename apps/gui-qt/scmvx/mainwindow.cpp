@@ -21,16 +21,45 @@
 #define SEISCOMP_COMPONENT MapView
 
 #include <seiscomp/logging/log.h>
+#include <algorithm>
+
 #include <seiscomp/core/datamessage.h>
+#include <seiscomp/core/message.h>
+#include <seiscomp/datamodel/configmodule.h>
+#include <seiscomp/datamodel/configstation.h>
+#include <seiscomp/datamodel/creationinfo.h>
+#include <seiscomp/datamodel/notifier.h>
 #include <seiscomp/gui/core/application.h>
 #include <seiscomp/gui/core/utils.h>
 #include <seiscomp/gui/datamodel/eventlayer.h>
 #include <seiscomp/gui/datamodel/origindialog.h>
 #include <seiscomp/io/archive/xmlarchive.h>
 
+#include <QAction>
+#include <QApplication>
+#include <QCheckBox>
+#include <QClipboard>
+#include <QDir>
+#include <QFile>
 #include <QFileDialog>
+#include <QFrame>
+#include <QGridLayout>
+#include <QGuiApplication>
+#include <QLabel>
+#include <QList>
+#include <QMap>
+#include <QMenu>
 #include <QMessageBox>
+#include <QScreen>
+#include <QScrollArea>
+#include <QStringList>
+#include <QStyle>
+#include <QTextStream>
+#include <QToolButton>
 #include <QTreeWidget>
+#include <QVBoxLayout>
+#include <QWidget>
+#include <QWidgetAction>
 
 #include "mainwindow.h"
 #include "searchwidget.h"
@@ -137,7 +166,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	connect(_ui.actionQuit, SIGNAL(triggered()), this, SLOT(close()));
 	connect(_ui.tabWidget, SIGNAL(currentChanged(int)), this, SLOT(switchTab(int)));
 
-	_mapWidget = new Gui::MapWidget(SCApp->mapsDesc());
+	_mapWidget = new MapWidget(SCApp->mapsDesc());
 	_mapWidget->installEventFilter(this);
 	_mapWidget->canvas().setLegendMargin(9);
 
@@ -162,6 +191,9 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 
 	_currentEventLayer = new CurrentEventLayer(_mapWidget);
 	_currentEventLayer->setVisible(_ui.actionShowLatestEvent->isChecked());
+	connect(_currentEventLayer, SIGNAL(clicked(std::string)),
+	        this, SLOT(selectEvent(std::string)),
+	        Qt::QueuedConnection);
 
 	connect(_ui.actionShowGrayscale, SIGNAL(toggled(bool)), _mapWidget, SLOT(setGrayScale(bool)));
 	connect(_ui.actionShowLatestEvent, SIGNAL(toggled(bool)), _currentEventLayer, SLOT(setVisible(bool)));
@@ -219,6 +251,16 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	_annotationLayer->setVisible(_ui.actionShowStationAnnotations->isChecked());
 
 	_networkLayer = new NetworkLayer(_mapWidget);
+	_mapWidget->setNetworkLayer(_networkLayer);
+	_mapWidget->setEventLayer(_eventLayer);
+	_mapWidget->setContextMenuExtender([this](QMenu *menu) {
+		QMenu *stationsStatusMenu = menu->addMenu(tr("Stations status"));
+		populateStationsStatusMenu(stationsStatusMenu);
+
+		StayOpenMenu *networksMenu = new StayOpenMenu(tr("Networks"), menu);
+		populateNetworksMenu(networksMenu);
+		menu->addMenu(networksMenu);
+	});
 
 	if ( global.stationLegendPosition == "topleft" ) {
 		_networkLayer->mainLegend()->setArea(Qt::AlignLeft | Qt::AlignTop);
@@ -240,6 +282,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	_networkLayer->setShowChannelCodes(_ui.actionShowChannelCodes->isChecked());
 	_networkLayer->setShowIssues(_ui.actionShowStationIssues->isChecked());
 	_networkLayer->setShowUnbound(_ui.actionShowUnboundStations->isChecked());
+	_networkLayer->setShowClosed(_ui.actionShowClosedStations->isChecked());
 
 	connect(_networkLayer, SIGNAL(stationEntered(Seiscomp::DataModel::Station*)),
 	        this, SLOT(stationEntered(Seiscomp::DataModel::Station*)));
@@ -253,9 +296,32 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	connect(_ui.actionShowChannelCodes, SIGNAL(toggled(bool)), _mapWidget, SLOT(update()));
 	connect(_ui.actionShowStationIssues, SIGNAL(toggled(bool)), _networkLayer, SLOT(setShowIssues(bool)));
 	connect(_ui.actionShowUnboundStations, SIGNAL(toggled(bool)), _networkLayer, SLOT(setShowUnbound(bool)));
+	connect(_ui.actionShowClosedStations, SIGNAL(toggled(bool)), _networkLayer, SLOT(setShowClosed(bool)));
 	connect(_ui.actionSearchStation, SIGNAL(triggered()), this, SLOT(searchStation()));
 	connect(_ui.actionCenterMapOnEventUpdate, SIGNAL(toggled(bool)), this, SLOT(toggleCentering(bool)));
 	connect(_ui.actionResetView, SIGNAL(triggered()), this, SLOT(resetView()));
+
+	{
+		// Add the network selection menu to the "View" menu, above "QC".
+		StayOpenMenu *networksMenu = new StayOpenMenu(tr("Networks"), _ui.menuView);
+		_ui.menuView->insertMenu(_ui.menuQC->menuAction(), networksMenu);
+		connect(networksMenu, &QMenu::aboutToShow, this, [this, networksMenu]() {
+			populateNetworksMenu(networksMenu);
+		});
+	}
+
+	{
+		// Add the stations-status exports to the "File" menu, above the
+		// separator that precedes "Quit".
+		QMenu *stationsStatusMenu = new QMenu(tr("Stations status"), _ui.menuFile);
+		auto fileActions = _ui.menuFile->actions();
+		int quitIndex = fileActions.indexOf(_ui.actionQuit);
+		QAction *before = quitIndex > 0 ? fileActions[quitIndex - 1] : _ui.actionQuit;
+		_ui.menuFile->insertMenu(before, stationsStatusMenu);
+		connect(stationsStatusMenu, &QMenu::aboutToShow, this, [this, stationsStatusMenu]() {
+			populateStationsStatusMenu(stationsStatusMenu);
+		});
+	}
 
 	{
 		QActionGroup *qcActions = new QActionGroup(_ui.menuQC);
@@ -320,8 +386,8 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	_mapWidget->canvas().addLayer(_networkLayer);
 	_mapWidget->canvas().addLayer(_eventLayer);
 	_mapWidget->canvas().addLayer(_annotationLayer);
-	_mapWidget->canvas().addLayer(_currentEventLayer);
 	_mapWidget->canvas().addLayer(new ScaleLayer);
+	_mapWidget->canvas().addLayer(_currentEventLayer);
 
 	_ui.menuSettings->addAction(this->_actionShowSettings);
 	_ui.menuView->insertAction(_ui.actionShowChannelCodes, this->_actionToggleFullScreen);
@@ -555,6 +621,21 @@ void MainWindow::addObject(const QString &, DataModel::Object *obj) {
 			it->second->triggerTime = pick->time().value();
 		}
 
+		bool known = false;
+		for ( auto &p : it->second->picks ) {
+			if ( p->publicID() == pick->publicID() ) {
+				p = pick;
+				known = true;
+				break;
+			}
+		}
+		if ( !known ) {
+			it->second->picks.push_back(pick);
+			if ( it->second->infoData ) {
+				static_cast<StationInfoDialog*>(it->second->infoData)->addPick(pick);
+			}
+		}
+
 		return;
 	}
 
@@ -724,6 +805,8 @@ void MainWindow::hoverEvent(const std::string &eventID) {
 void MainWindow::selectEvent(const std::string &eventID) {
 	dm::EventPtr event = _cache.get<dm::Event>(eventID);
 	if ( event ) {
+		dm::OriginPtr origin = _cache.get<dm::Origin>(event->preferredOriginID());
+		dm::MagnitudePtr magnitude = _cache.get<dm::Magnitude>(event->preferredMagnitudeID());
 		if ( !_eventDetails ) {
 			_eventDetails = new EventInfoDialog(this, Qt::Tool);
 			connect(_eventDetails, SIGNAL(destroyed(QObject*)),
@@ -732,7 +815,7 @@ void MainWindow::selectEvent(const std::string &eventID) {
 			_eventDetails->restoreGeometry(_eventDetailsState);
 		}
 
-		_eventDetails->setEvent(event.get());
+		_eventDetails->setEvent(event.get(), origin.get(), magnitude.get());
 		_eventDetails->show();
 		_eventDetails->activateWindow();
 	}
@@ -797,11 +880,19 @@ void MainWindow::stationClicked(DataModel::Station *station) {
 
 	StationInfoDialog dlg(station, data);
 
-	data->infoData = &dlg;
+	if ( data ) {
+		data->infoData = &dlg;
+		connect(&dlg, &StationInfoDialog::setStationEnabled, this,
+		        [this, station](bool enable) {
+			setStationEnabled(station->network()->code(), station->code(), enable);
+		});
+	}
 	dlg.restoreGeometry(_lastInfoGeometry);
 	dlg.exec();
 	_lastInfoGeometry = dlg.saveGeometry();
-	data->infoData = nullptr;
+	if ( data ) {
+		data->infoData = nullptr;
+	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -921,6 +1012,100 @@ void MainWindow::updateStation(DataModel::ConfigStation *cs, DataModel::Operatio
 		}
 		default:
 			break;
+	}
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+DataModel::ConfigStation *MainWindow::configStation(const std::string &net,
+                                                    const std::string &sta) const {
+	DataModel::ConfigModule *module = SCApp->configModule();
+	if ( !module ) {
+		return nullptr;
+	}
+
+	for ( size_t i = 0; i < module->configStationCount(); ++i ) {
+		DataModel::ConfigStation *cs = module->configStation(i);
+		if ( cs->networkCode() == net && cs->stationCode() == sta ) {
+			return cs;
+		}
+	}
+
+	return nullptr;
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void MainWindow::setStationEnabled(const std::string &net, const std::string &sta,
+                                   bool enable) {
+	std::string staID = net + "." + sta;
+
+	// Update the local configuration state and recolor the map immediately.
+	auto it = global.stationIDConfig.find(staID);
+	if ( it != global.stationIDConfig.end() ) {
+		it->second->enabled = enable;
+		_networkLayer->updateStation(staID);
+	}
+
+	// Mirror the change into the config module and send it to the CONFIG
+	// message group as a notifier, the same way scrttv does.
+	DataModel::ConfigStation *cs = configStation(net, sta);
+	if ( !cs ) {
+		DataModel::ConfigModule *module = SCApp->configModule();
+		if ( !module ) {
+			return;
+		}
+
+		DataModel::ConfigStationPtr newCs = DataModel::ConfigStation::Create(
+			"Config/" + module->name() + "/" + net + "/" + sta);
+		newCs->setNetworkCode(net);
+		newCs->setStationCode(sta);
+		newCs->setEnabled(enable);
+
+		DataModel::CreationInfo ci;
+		ci.setAuthor(SCApp->author());
+		ci.setAgencyID(SCApp->agencyID());
+		ci.setCreationTime(Core::Time::UTC());
+		newCs->setCreationInfo(ci);
+
+		DataModel::Notifier::Enable();
+		module->add(newCs.get());
+		DataModel::Notifier::Disable();
+
+		cs = newCs.get();
+	}
+
+	if ( cs->enabled() != enable ) {
+		cs->setEnabled(enable);
+
+		DataModel::CreationInfo *ci;
+		try {
+			ci = &cs->creationInfo();
+			ci->setModificationTime(Core::Time::UTC());
+		}
+		catch ( ... ) {
+			cs->setCreationInfo(DataModel::CreationInfo());
+			ci = &cs->creationInfo();
+			ci->setCreationTime(Core::Time::UTC());
+		}
+
+		ci->setAuthor(SCApp->author());
+		ci->setAgencyID(SCApp->agencyID());
+
+		DataModel::Notifier::Enable();
+		cs->update();
+		DataModel::Notifier::Disable();
+	}
+
+	Core::MessagePtr msg = DataModel::Notifier::GetMessage(true);
+	if ( msg ) {
+		SCApp->sendMessage("CONFIG", msg.get());
 	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -1058,6 +1243,300 @@ void MainWindow::filterStations() {
 			);
 		}
 	}
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void MainWindow::populateNetworksMenu(QMenu *menu) {
+	menu->clear();
+
+	QAction *selectAll = menu->addAction(tr("Select all"));
+	QAction *unselectAll = menu->addAction(tr("Unselect all"));
+	menu->addSeparator();
+
+	QWidget *grid = new QWidget(menu);
+	QGridLayout *gridLayout = new QGridLayout(grid);
+	gridLayout->setContentsMargins(4, 2, 4, 2);
+	gridLayout->setHorizontalSpacing(12);
+	gridLayout->setVerticalSpacing(2);
+
+	QList<QCheckBox*> boxes;
+	const QStringList codes = _networkLayer->networkCodes();
+	for ( int i = 0; i < codes.size(); ++i ) {
+		const QString code = codes[i];
+		QCheckBox *box = new QCheckBox(code, grid);
+		box->setChecked(_networkLayer->isNetworkVisible(code));
+		connect(box, &QCheckBox::toggled, this,
+		        [this, code](bool on) { _networkLayer->setNetworkVisible(code, on); });
+		gridLayout->addWidget(box, i % 10, i / 10);
+		boxes.append(box);
+	}
+
+	QWidgetAction *gridAction = new QWidgetAction(menu);
+	gridAction->setDefaultWidget(grid);
+	menu->addAction(gridAction);
+
+	connect(selectAll, &QAction::triggered, this, [boxes]() {
+		for ( QCheckBox *b : boxes ) {
+			b->setChecked(true);
+		}
+	});
+	connect(unselectAll, &QAction::triggered, this, [boxes]() {
+		for ( QCheckBox *b : boxes ) {
+			b->setChecked(false);
+		}
+	});
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void MainWindow::populateStationsStatusMenu(QMenu *menu) {
+	menu->clear();
+
+	QLabel *header = new QLabel(
+		tr("Visible stations: %1").arg(_networkLayer->visibleStationCount()), menu);
+	header->setAlignment(Qt::AlignCenter);
+	header->setContentsMargins(6, 2, 6, 2);
+	QWidgetAction *headerAction = new QWidgetAction(menu);
+	headerAction->setDefaultWidget(header);
+	menu->addAction(headerAction);
+	menu->addSeparator();
+
+	struct Entry {
+		QString label;
+		int     count;
+		QString saveTitle;
+		QString defaultName;
+		QString content;
+	};
+
+	auto byLabel = [](const Entry &a, const Entry &b) {
+		return a.label.localeAwareCompare(b.label) < 0;
+	};
+
+	QList<Entry> statusEntries = {
+		{ tr("Disabled"), _networkLayer->disabledStationCount(),
+		  tr("Save disabled stations"), "stations-disabled",
+		  _networkLayer->disabledStationList() },
+		{ tr("Enabled"), _networkLayer->enabledStationCount(),
+		  tr("Save enabled stations"), "stations-enabled",
+		  _networkLayer->enabledStationList() },
+	};
+
+	QList<Entry> issueEntries = {
+		{ tr("Bindings mismatching inventory"), _networkLayer->mismatchStationCount(),
+		  tr("Save stations with binding mismatch"), "stations-bindings-mismatch",
+		  _networkLayer->mismatchStationList() },
+		{ tr("Closed"), _networkLayer->closedStationCount(),
+		  tr("Save closed stations"), "stations-closed",
+		  _networkLayer->closedStationList() },
+		{ tr("Missing detecStream configuration"), _networkLayer->noDetecStreamStationCount(),
+		  tr("Save stations missing detecStream"), "stations-no-detecstream",
+		  _networkLayer->noDetecStreamStationList() },
+		{ tr("Missing global bindings"), _networkLayer->unboundStationCount(),
+		  tr("Save unbound stations"), "stations-unbound",
+		  _networkLayer->unboundStationList() },
+	};
+
+	std::sort(statusEntries.begin(), statusEntries.end(), byLabel);
+	std::sort(issueEntries.begin(), issueEntries.end(), byLabel);
+
+	auto addEntries = [this, menu](const QList<Entry> &entries) {
+		for ( const Entry &e : entries ) {
+			addStationsStatusMenu(menu, e.label, e.count, e.saveTitle, e.defaultName, e.content);
+		}
+	};
+
+	// Enable/disable status on top, separated from the issue categories.
+	addEntries(statusEntries);
+	menu->addSeparator();
+	addEntries(issueEntries);
+
+	// CSV report: one row per "networkCode.stationCode", one column per
+	// category (1 = the station is a member of that category).
+	QList<Entry> allEntries = statusEntries + issueEntries;
+
+	QStringList headerRow;
+	headerRow << "#station";
+	for ( const Entry &e : allEntries ) {
+		headerRow << e.label;
+	}
+
+	QMap<QString, QList<bool>> table;
+	for ( int c = 0; c < allEntries.size(); ++c ) {
+		const QStringList codes = allEntries[c].content.isEmpty()
+		                          ? QStringList() : allEntries[c].content.split('\n');
+		for ( const QString &code : codes ) {
+			QList<bool> &row = table[code];
+			while ( row.size() < allEntries.size() ) {
+				row << false;
+			}
+			row[c] = true;
+		}
+	}
+
+	QStringList lines;
+	lines << headerRow.join(',');
+	for ( auto it = table.constBegin(); it != table.constEnd(); ++it ) {
+		QStringList row;
+		row << it.key();
+		for ( bool member : it.value() ) {
+			row << (member ? "1" : "0");
+		}
+		lines << row.join(',');
+	}
+	QString report = lines.join('\n');
+
+	menu->addSeparator();
+	QMenu *reportMenu = menu->addMenu(tr("Create report"));
+	connect(reportMenu->addAction(tr("Copy to clipboard")), &QAction::triggered, this,
+	        [this, report]() { copyStationsToClipboard(report); });
+	connect(reportMenu->addAction(tr("Save to file")), &QAction::triggered, this,
+	        [this, report]() {
+	        	saveStationsToFile(tr("Save stations status report"), report,
+	        	                   "stations-status-report");
+	        });
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void MainWindow::addStationsStatusMenu(QMenu *menu, const QString &label, int count,
+                                     const QString &saveTitle, const QString &defaultName,
+                                     const QString &content) {
+	QMenu *sub = menu->addMenu(label + QString(":\t%1").arg(count));
+	sub->setEnabled(count > 0);
+	connect(sub->addAction(tr("Copy to clipboard")), &QAction::triggered, this,
+	        [this, content]() { copyStationsToClipboard(content); });
+	connect(sub->addAction(tr("Save to file")), &QAction::triggered, this,
+	        [this, saveTitle, content, defaultName]() {
+	        	saveStationsToFile(saveTitle, content, defaultName);
+	        });
+
+	QMenu *searchMenu = sub->addMenu(tr("Search"));
+	connect(searchMenu, &QMenu::aboutToShow, this, [this, searchMenu, content]() {
+		populateStationSearchMenu(searchMenu, content);
+	});
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void MainWindow::populateStationSearchMenu(QMenu *menu, const QString &content) {
+	menu->clear();
+
+	const QStringList codes = content.isEmpty() ? QStringList()
+	                                            : content.split('\n');
+
+	QWidget *container = new QWidget(menu);
+	QVBoxLayout *containerLayout = new QVBoxLayout(container);
+	containerLayout->setContentsMargins(6, 4, 6, 4);
+	containerLayout->setSpacing(2);
+
+	QLabel *header = new QLabel(tr("stations"), container);
+	header->setAlignment(Qt::AlignCenter);
+	containerLayout->addWidget(header);
+
+	QFrame *separator = new QFrame(container);
+	separator->setFrameShape(QFrame::HLine);
+	separator->setFrameShadow(QFrame::Sunken);
+	containerLayout->addWidget(separator);
+
+	QWidget *list = new QWidget;
+	QVBoxLayout *listLayout = new QVBoxLayout(list);
+	listLayout->setContentsMargins(0, 0, 0, 0);
+	listLayout->setSpacing(2);
+
+	for ( const QString &code : codes ) {
+		QToolButton *button = new QToolButton(list);
+		button->setAutoRaise(true);
+		button->setToolButtonStyle(Qt::ToolButtonTextOnly);
+		button->setText(code);
+		connect(button, &QToolButton::clicked, this, [this, code]() {
+			QPointF location;
+			if ( _networkLayer->stationLocation(code, location) ) {
+				_mapWidget->canvas().setMapCenter(location);
+				_mapWidget->update();
+			}
+
+			// Dismiss the whole menu chain, mirroring a normal menu action.
+			while ( QWidget *popup = QApplication::activePopupWidget() ) {
+				popup->close();
+			}
+		});
+		listLayout->addWidget(button);
+	}
+
+	QScrollArea *scroll = new QScrollArea(container);
+	scroll->setWidgetResizable(true);
+	scroll->setFrameShape(QFrame::NoFrame);
+	scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+	scroll->setWidget(list);
+
+	// Reserve room for the vertical scrollbar so the codes are not truncated.
+	scroll->setMinimumWidth(list->sizeHint().width() +
+	                        style()->pixelMetric(QStyle::PM_ScrollBarExtent));
+
+	// Cap at ~20 rows (or the available screen height), scrolling beyond that.
+	int rows = codes.size();
+	int fullHeight = list->sizeHint().height();
+	int maxHeight = fullHeight;
+	if ( rows > 20 ) {
+		maxHeight = fullHeight * 20 / rows;
+	}
+	int screenHeight = QGuiApplication::primaryScreen()->availableGeometry().height();
+	maxHeight = qMin(maxHeight, screenHeight - 160);
+	scroll->setMaximumHeight(maxHeight);
+	containerLayout->addWidget(scroll);
+
+	QWidgetAction *action = new QWidgetAction(menu);
+	action->setDefaultWidget(container);
+	menu->addAction(action);
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void MainWindow::copyStationsToClipboard(const QString &content) {
+	QApplication::clipboard()->setText(content);
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void MainWindow::saveStationsToFile(const QString &title, const QString &content,
+                                    const QString &defaultName) {
+	QString fileName = QFileDialog::getSaveFileName(
+		this, title, QDir("/tmp").filePath(defaultName),
+		tr("Text files (*.txt);;All files (*)"));
+
+	if ( fileName.isEmpty() ) {
+		return;
+	}
+
+	QFile file(fileName);
+	if ( !file.open(QIODevice::WriteOnly | QIODevice::Text) ) {
+		QMessageBox::critical(this, tr("Error"),
+		                      tr("Failed to open file for writing:\n%1").arg(fileName));
+		return;
+	}
+
+	QTextStream stream(&file);
+	stream << content << '\n';
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

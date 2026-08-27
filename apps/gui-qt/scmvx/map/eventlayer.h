@@ -61,6 +61,18 @@ class EventLayer : public Seiscomp::Gui::Backport::EventLayer {
 		void setCurrentEvent(DataModel::Event *evt);
 		int eventCount() const;
 
+		//! Returns true if a symbol for the given event is currently present
+		//! (i.e. the event is shown on the map).
+		bool hasEvent(const std::string &eventID) const;
+
+		//! Shows only the given event's symbol and hides all other event
+		//! symbols. Used to reveal a single event while the layer would
+		//! otherwise be switched off.
+		void showOnlyEvent(const std::string &eventID);
+
+		//! Makes all event symbols visible again.
+		void showAllEvents();
+
 		//! Returns the public IDs of the visible events under the given widget
 		//! position, topmost first.
 		std::vector<std::string> eventsUnder(int x, int y) const;

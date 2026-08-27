@@ -52,6 +52,36 @@
 				The legend location for event symbols.
 				</description>
 			</parameter>
+			<group name="display">
+				<description>
+				The initial rectangular region for the map. The eventual region
+				is also scaled to the dimension of the opened map widget.
+				</description>
+				<parameter name="latmin" type="double" default="-90.0" unit="deg" range="-90..90">
+					<description>Minimum latitude in degrees.</description>
+				</parameter>
+				<parameter name="lonmin" type="double" default="-180.0" unit="deg" range="-360..360">
+					<description>Minimum longitude in degrees.</description>
+				</parameter>
+				<parameter name="latmax" type="double" default="90.0" unit="deg" range="-90..90">
+					<description>Maximum latitude in degrees.</description>
+				</parameter>
+				<parameter name="lonmax" type="double" default="180.0" unit="deg" range="-360..360">
+					<description>Maximum longitude in degrees.</description>
+				</parameter>
+			</group>
+			<group name="events">
+				<description>
+				The initial configuration for events. The visibiliy of events
+				can be set by configuration of the global parameter
+				&quot;map.layers.events.visible&quot;.
+				</description>
+				<parameter name="showLatestEventWidget" type="boolean" default="true">
+					<description>Show the latest event widget. The widget can
+					be toggelt interactively by the View menu.
+					</description>
+				</parameter>
+			</group>
 			<group name="stations">
 				<parameter name="amplitudeTimeSpan" type="double" default="10" unit="s">
 					<description>
@@ -79,24 +109,6 @@
 					<description>
 					Sets the filter applied to determine ground motion.
 					</description>
-				</parameter>
-			</group>
-			<group name="display">
-				<description>
-				The initial rectangular region for the map. The eventual region
-				is also scaled to the dimension of the opened map widget.
-				</description>
-				<parameter name="latmin" type="double" default="-90.0" unit="deg" range="-90:90">
-					<description>Minimum latitude in degrees.</description>
-				</parameter>
-				<parameter name="lonmin" type="double" default="-180.0" unit="deg" range="-360:360">
-					<description>Minimum longitude in degrees.</description>
-				</parameter>
-				<parameter name="latmax" type="double" default="90.0" unit="deg" range="-90:90">
-					<description>Maximum latitude in degrees.</description>
-				</parameter>
-				<parameter name="lonmax" type="double" default="180.0" unit="deg" range="-360:360">
-					<description>Maximum longitude in degrees.</description>
 				</parameter>
 			</group>
 		</configuration>

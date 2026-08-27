@@ -234,6 +234,48 @@ int EventLayer::eventCount() const {
 
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+bool EventLayer::hasEvent(const std::string &eventID) const {
+	return _eventSymbols.contains(eventID);
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void EventLayer::showOnlyEvent(const std::string &eventID) {
+	for ( auto it = _eventSymbols.begin(); it != _eventSymbols.end(); ++it ) {
+		bool visible = it.key() == eventID;
+		it.value().origin->setVisible(visible);
+		if ( it.value().tensor ) {
+			it.value().tensor->setVisible(visible);
+		}
+	}
+
+	emit updateRequested();
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void EventLayer::showAllEvents() {
+	for ( auto &symbol : _eventSymbols ) {
+		symbol.origin->setVisible(true);
+		if ( symbol.tensor ) {
+			symbol.tensor->setVisible(true);
+		}
+	}
+
+	emit updateRequested();
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void EventLayer::draw(const Map::Canvas *canvas, QPainter &p) {
 	EventSymbol *currentSymbol = nullptr;
 

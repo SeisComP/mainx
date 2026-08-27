@@ -108,6 +108,7 @@ class MainWindow : public Gui::MainWindow {
 
 		void hoverEvent(const std::string &);
 		void selectEvent(const std::string &);
+		void showCurrentEventDetails(const std::string &);
 		void selectEventFromList(Seiscomp::DataModel::Event *);
 
 		void stationEntered(Seiscomp::DataModel::Station *station);
@@ -186,6 +187,12 @@ class MainWindow : public Gui::MainWindow {
 		SearchWidget                  *_currentSearch{nullptr};
 		EventInfoDialog               *_eventDetails{nullptr};
 		QByteArray                     _eventDetailsState;
+		//! Event that was shown on the map only to display its details; it is
+		//! hidden again when the details window closes.
+		DataModel::EventPtr            _forcedEvent;
+		//! True if the event layer was switched off and temporarily shown to
+		//! display the forced event; it is hidden again on close.
+		bool                           _eventLayerForcedVisible{false};
 		DataModel::EventParametersPtr  _localEP;
 };
 

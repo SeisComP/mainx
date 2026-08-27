@@ -32,6 +32,7 @@
 #include <map>
 #include <set>
 
+#include <QRect>
 #include <QStringList>
 
 #include "../settings.h"
@@ -215,8 +216,19 @@ class NetworkLayer : public Gui::Map::Layer {
 		//! display.
 		bool isNetworkVisible(const QString &code) const;
 
+		//! Whether any network is currently hidden, i.e. the stations are
+		//! filtered by network code.
+		bool hasHiddenNetworks() const { return !_hiddenNetworks.empty(); }
+
 		//! Total number of currently visible stations.
 		int visibleStationCount() const;
+
+		//! Number of stations known to the layer, excluding those whose
+		//! epochs/streams are currently closed.
+		int stationCount() const;
+
+		//! Number of currently visible stations that are not closed.
+		int visibleOpenStationCount() const;
 
 		//! Number of currently visible stations in each export category.
 		int closedStationCount() const;
@@ -272,6 +284,9 @@ class NetworkLayer : public Gui::Map::Layer {
 		void stationEntered(Seiscomp::DataModel::Station *station);
 		void stationLeft();
 		void stationClicked(Seiscomp::DataModel::Station *station);
+
+		//! Emitted when the station-filter alert box is clicked.
+		void filterAlertClicked();
 
 
 	// ----------------------------------------------------------------------
@@ -375,6 +390,11 @@ class NetworkLayer : public Gui::Map::Layer {
 		QMap<std::string, NetworkLayerGradient>  _qcGradients;
 
 		mutable NetworkLayerSymbol              *_isInsideSymbol;
+
+		//! Screen rectangle of the station-filter alert box (empty when it is
+		//! not shown) and whether the cursor is currently over it.
+		mutable QRect                            _filterAlertRect;
+		mutable bool                             _isInsideAlert{false};
 };
 
 

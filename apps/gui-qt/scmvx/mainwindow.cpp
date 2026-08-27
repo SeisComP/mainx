@@ -39,6 +39,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QClipboard>
+#include <QCursor>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
@@ -192,7 +193,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	_currentEventLayer = new CurrentEventLayer(_mapWidget);
 	_currentEventLayer->setVisible(_ui.actionShowLatestEvent->isChecked());
 	connect(_currentEventLayer, SIGNAL(clicked(std::string)),
-	        this, SLOT(selectEvent(std::string)),
+	        this, SLOT(showCurrentEventDetails(std::string)),
 	        Qt::QueuedConnection);
 
 	connect(_ui.actionShowGrayscale, SIGNAL(toggled(bool)), _mapWidget, SLOT(setGrayScale(bool)));
@@ -289,6 +290,12 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags f)
 	connect(_networkLayer, SIGNAL(stationLeft()), this, SLOT(stationLeft()));
 	connect(_networkLayer, SIGNAL(stationClicked(Seiscomp::DataModel::Station*)),
 	        this, SLOT(stationClicked(Seiscomp::DataModel::Station*)));
+
+	connect(_networkLayer, &NetworkLayer::filterAlertClicked, this, [this]() {
+		StayOpenMenu menu(tr("Networks"), this);
+		populateNetworksMenu(&menu);
+		menu.exec(QCursor::pos());
+	});
 
 	connect(_ui.actionShowStationAnnotations, SIGNAL(toggled(bool)), _annotationLayer, SLOT(setVisible(bool)));
 	connect(_ui.actionShowStationAnnotations, SIGNAL(toggled(bool)), _mapWidget, SLOT(update()));
@@ -749,7 +756,9 @@ void MainWindow::eventsUpdated() {
 		if ( _latestEvent ) {
 			Event evtObj;
 			evtObj.setEvent(evt, _cache);
-			if ( _latestEvent.isMoreRecent(evtObj) ) continue;
+			if ( _latestEvent.isMoreRecent(evtObj) ) {
+				continue;
+			}
 			_latestEvent = evtObj;
 		}
 		else
@@ -802,6 +811,54 @@ void MainWindow::hoverEvent(const std::string &eventID) {
 
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void MainWindow::showCurrentEventDetails(const std::string &eventID) {
+	dm::EventPtr event = _cache.get<dm::Event>(eventID);
+	if ( event ) {
+		// Center the map on the event.
+		dm::OriginPtr origin = _cache.get<dm::Origin>(event->preferredOriginID());
+		if ( origin ) {
+			_mapWidget->canvas().setMapCenter(
+			            QPointF(origin->longitude().value(), origin->latitude().value())
+			);
+		}
+
+		// If an earlier click forced a different event onto the map, hide it
+		// again before forcing the new one.
+		if ( _forcedEvent && (_forcedEvent->publicID() != eventID) ) {
+			_eventLayer->removeEvent(_forcedEvent.get());
+			_forcedEvent = nullptr;
+		}
+
+		// Show the event on the map if it is not currently displayed, e.g.
+		// because the event layer does not hold it.
+		if ( !_eventLayer->hasEvent(eventID) ) {
+			_eventLayer->addEvent(event.get(), false);
+			_forcedEvent = event;
+		}
+
+		// The event symbols may be switched off via the map's Layers menu.
+		// In that case reveal only the selected latest event and keep the
+		// other events hidden; the layer is switched off again on close.
+		if ( !_eventLayer->isVisible() ) {
+			_eventLayer->showOnlyEvent(eventID);
+			_eventLayer->setVisible(true);
+			_eventLayerForcedVisible = true;
+		}
+
+		// Highlight it as the current event so its symbol is shown even when
+		// the event symbols are otherwise not displayed.
+		_eventLayer->setCurrentEvent(event.get());
+		_mapWidget->update();
+	}
+
+	selectEvent(eventID);
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void MainWindow::selectEvent(const std::string &eventID) {
 	dm::EventPtr event = _cache.get<dm::Event>(eventID);
 	if ( event ) {
@@ -820,9 +877,7 @@ void MainWindow::selectEvent(const std::string &eventID) {
 		_eventDetails->activateWindow();
 	}
 	else {
-		QMessageBox::critical(
-			nullptr, tr("Error"),
-			tr("Event %1 could not be found").arg(eventID.c_str())
+		QMessageBox::critical(nullptr, tr("Error"), tr("Event %1 could not be found").arg(eventID.c_str())
 		);
 	}
 }
@@ -835,12 +890,7 @@ void MainWindow::selectEvent(const std::string &eventID) {
 void MainWindow::selectEventFromList(Seiscomp::DataModel::Event *evt) {
 	dm::OriginPtr org = _cache.get<dm::Origin>(evt->preferredOriginID());
 	if ( org ) {
-		_mapWidget->canvas().setMapCenter(
-			QPointF(
-				org->longitude().value(),
-				org->latitude().value()
-			)
-		);
+		_mapWidget->canvas().setMapCenter(QPointF(org->longitude().value(), org->latitude().value()));
 	}
 	_ui.tabWidget->setCurrentWidget(_ui.tabNetwork);
 }
@@ -851,8 +901,9 @@ void MainWindow::selectEventFromList(Seiscomp::DataModel::Event *evt) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void MainWindow::stationEntered(DataModel::Station *station) {
-	if ( statusBar() )
+	if ( statusBar() ) {
 		statusBar()->showMessage((station->network()->code() + "." + station->code()).c_str());
+	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -1552,6 +1603,22 @@ void MainWindow::objectDestroyed(QObject *obj) {
 	else if ( _eventDetails == obj ) {
 		_eventDetailsState = _eventDetails->saveGeometry();
 		_eventDetails = nullptr;
+
+		// Hide the event again if it was only shown to display its details.
+		if ( _forcedEvent ) {
+			_eventLayer->removeEvent(_forcedEvent.get());
+			_forcedEvent = nullptr;
+		}
+
+		// Switch the event layer off again if it was only shown for this,
+		// restoring the visibility of the other event symbols.
+		if ( _eventLayerForcedVisible ) {
+			_eventLayer->showAllEvents();
+			_eventLayer->setVisible(false);
+			_eventLayerForcedVisible = false;
+		}
+
+		_mapWidget->update();
 	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

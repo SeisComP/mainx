@@ -97,17 +97,20 @@ bool isClosedStation(DataModel::Station *sta, const Core::Time &refTime) {
 }
 
 
-void drawClosedMarker(QPainter &painter, const QPoint &lowerLeft, int size) {
-	static QColor crossColor(192, 0, 0);
-	size = size / 2; // 50% of the issue-indicator size
+void drawInfoSymbol(QPainter &painter, const QPoint &lowerLeft, const QPixmap &pixmap) {
+	static QColor errorBorder(QColor(255,128,0));
+	QSize layoutSize = pixmap.size() / pixmap.devicePixelRatio();
+	int size = qMax(layoutSize.width(), layoutSize.height());
 	int radius = size * 75 / 100;
 	QPoint center = lowerLeft + QPoint(radius, -radius);
-	painter.save();
-	painter.setRenderHint(QPainter::Antialiasing, true);
-	painter.setPen(QPen(crossColor, qMax(2, size / 5), Qt::SolidLine, Qt::RoundCap));
-	painter.drawLine(center + QPoint(-radius, -radius), center + QPoint(radius, radius));
-	painter.drawLine(center + QPoint(-radius, radius), center + QPoint(radius, -radius));
-	painter.restore();
+	painter.setPen(QPen(errorBorder, qMax(2, size / 5)));
+	painter.setBrush(Qt::white);
+	painter.drawEllipse(center, radius, radius);
+	painter.drawPixmap(
+		center.x() - layoutSize.width() / 2,
+		center.y() - layoutSize.height() / 2,
+		pixmap
+	);
 }
 
 
@@ -994,6 +997,26 @@ int NetworkLayer::visibleStationCount() const {
 	return count;
 }
 
+int NetworkLayer::stationCount() const {
+	int count = 0;
+	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
+		if ( !s->isClosed() ) {
+			++count;
+		}
+	}
+	return count;
+}
+
+int NetworkLayer::visibleOpenStationCount() const {
+	int count = 0;
+	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
+		if ( s->isVisible() && !s->isClosed() ) {
+			++count;
+		}
+	}
+	return count;
+}
+
 int NetworkLayer::closedStationCount() const {
 	return stationListCount(closedStationList());
 }
@@ -1186,6 +1209,12 @@ void NetworkLayer::tick() {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool NetworkLayer::isInside(const QMouseEvent *event, const QPointF &geoPos) {
+	_isInsideAlert = hasHiddenNetworks() && _filterAlertRect.contains(event->pos());
+	if ( _isInsideAlert ) {
+		_isInsideSymbol = nullptr;
+		return true;
+	}
+
 	int x = event->pos().x();
 	int y = event->pos().y();
 	auto it = _stationSymbols.end();
@@ -1239,7 +1268,11 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 			s->draw(canvas, p);
 
 			if ( s->isClosed() ) {
-				drawClosedMarker(p, s->pos() + QPoint(0, -s->width() / 2), p.fontMetrics().height());
+				static OPT(QPixmap) pmClosed;
+				if ( !pmClosed ) {
+					pmClosed = Gui::pixmap(p.fontMetrics(), "close", QColor(Qt::black), p.device()->devicePixelRatioF());
+				}
+				drawInfoSymbol(p, s->pos() + QPoint(0, -s->width() / 2), *pmClosed);
 			}
 
 			if ( showIssues && (s->state() != Settings::OK) && !s->isClosed() ) {
@@ -1282,6 +1315,72 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 				}
 			}
 		}
+	}
+
+	// Alert the user when the stations are filtered by network code so that
+	// only a subset of them is shown. Drawn here, independently of the scale
+	// layer, at the same position (just above the scale box).
+	_filterAlertRect = QRect();
+	if ( hasHiddenNetworks() ) {
+		p.setRenderHint(QPainter::Antialiasing, true);
+		p.setFont(qApp->font());
+
+		QColor orange(255, 127, 0);
+		QFont normalFont = p.font();
+		QFont boldFont = normalFont;
+		boldFont.setBold(true);
+
+		QFontMetrics fmN(normalFont);
+		QFontMetrics fmB(boldFont);
+
+		QString prefix = tr("Open stations: ");
+		QString shownStr = QString::number(visibleOpenStationCount());
+		QString suffix = QString(" / %1").arg(stationCount());
+
+		int eh = fmN.height();
+		int iconSz = eh;
+		int gap = 4;
+		int pad = 4;
+
+		int prefixW = QT_FM_WIDTH(fmN, prefix);
+		int shownW = QT_FM_WIDTH(fmB, shownStr);
+		int suffixW = QT_FM_WIDTH(fmN, suffix);
+		int contentW = iconSz + gap + prefixW + shownW + suffixW;
+
+		// Same anchor as the scale box (bottom-center), placed just above it.
+		int scaleBoxHeight = eh + 4 + eh/2 + 8;
+		int scaleBoxTop = canvas->height() - 10 - scaleBoxHeight;
+
+		QRect box(0, 0, contentW + 2*pad, eh + 2*pad);
+		box.moveLeft((canvas->width() - box.width())/2);
+		box.moveBottom(scaleBoxTop - 6);
+		_filterAlertRect = box;
+
+		p.setPen(Qt::darkGray);
+		p.setBrush(QColor(255,255,255,192));
+		p.drawRect(box);
+
+		int x = box.left() + pad;
+
+		QPixmap icon = Gui::icon("filter", orange).pixmap(iconSz);
+		p.drawPixmap(x, box.top() + (box.height() - iconSz)/2, icon);
+		x += iconSz + gap;
+
+		int baseY = box.top() + pad + fmN.ascent();
+
+		p.setFont(normalFont);
+		p.setPen(Qt::black);
+		p.drawText(x, baseY, prefix);
+		x += prefixW;
+
+		p.setFont(boldFont);
+		p.setPen(orange);
+		p.drawText(x, baseY, shownStr);
+		x += shownW;
+
+		p.setFont(normalFont);
+		p.setPen(Qt::black);
+		p.drawText(x, baseY, suffix);
 	}
 
 	p.restore();
@@ -1346,6 +1445,10 @@ bool NetworkLayer::filterMouseMoveEvent(QMouseEvent *e, const QPointF &) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool NetworkLayer::filterMousePressEvent(QMouseEvent *, const QPointF &) {
+	if ( _isInsideAlert ) {
+		return true;
+	}
+
 	_currentClickSymbol = _currentSymbol;
 	return _currentClickSymbol != nullptr;
 }
@@ -1356,6 +1459,11 @@ bool NetworkLayer::filterMousePressEvent(QMouseEvent *, const QPointF &) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool NetworkLayer::filterMouseReleaseEvent(QMouseEvent *, const QPointF &) {
+	if ( _isInsideAlert ) {
+		emit filterAlertClicked();
+		return true;
+	}
+
 	if ( _clickSuppressed ) {
 		_currentClickSymbol = nullptr;
 		return false;

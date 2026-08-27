@@ -55,7 +55,7 @@ void Settings::accept(System::Application::SettingsLinker &linker) {
 	& cfg(triggerFrameSize, "stations.triggerFrameSize")
 	& cfg(eventTimeSpan, "readEventsNotOlderThan")
 	& cfg(centerOrigins, "centerOrigins")
-	& cfg(showLatestEvent, "showLatestEvent")
+	& cfg(showLatestEvent, "events.showLatestEventWidget")
 	& cfg(displayMode, "displaymode")
 	& cfg(initialRegion, "display")
 	& cfg(stationLegendPosition, "mapLegendPosition")

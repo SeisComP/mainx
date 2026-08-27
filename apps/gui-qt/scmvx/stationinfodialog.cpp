@@ -178,19 +178,21 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 	_ui.frameTrace->setLayout(vl);
 
 	_ui.labelFilter->setText(global.filter.c_str());
-	if ( stationData && stationData->channel )
+	if ( stationData && stationData->channel ) {
 		_ui.labelCode->setText((station->network()->code() + "." + station->code() + "." +
 		                        stationData->channel->sensorLocation()->code() + "." +
 		                        stationData->channel->code()).c_str());
-	else
+	}
+	else {
 		_ui.labelCode->setText((station->network()->code() + "." + station->code()).c_str());
+	}
 	_ui.labelNetwork->setText(station->network()->description().c_str());
 	_ui.labelDescription->setText(station->description().c_str());
 
 	Core::Time lastEnd;
 	if ( allStreamsClosed(station, Core::Time::UTC(), lastEnd) ) {
-		_ui.labelIssueIcon->setPixmap(Gui::icon("close", QColor(192, 0, 0)).pixmap(fontMetrics().height() * 2));
-		_ui.labelIssueText->setText(tr("All streams from the station closed in the past. Last end time: %1")
+		_ui.labelIssueIcon->setPixmap(Gui::icon("close", QColor(255,128,0)).pixmap(fontMetrics().height() * 2));
+		_ui.labelIssueText->setText(tr("All streams from the station were closed in the past. Last end time: %1")
 		                            .arg(lastEnd.toString("%F %T").c_str()));
 	}
 	else if ( stationData ) {
@@ -213,19 +215,19 @@ StationInfoDialog::StationInfoDialog(const DataModel::Station *station,
 				break;
 
 			case Settings::NoPrimaryStream:
-				icon = Gui::icon("settings", QColor(255,128,0));
+				icon = Gui::icon("settings", QColor(Qt::darkRed));
 				_ui.labelIssueText->setText(tr("The parameter 'detecStream' is not configured by global bindings."));
 				break;
 
 			case Settings::NoChannelGroupMetaData:
 				icon = Gui::icon("database", QColor(Qt::darkRed));
-				_ui.labelIssueText->setText(tr("The configured bindings channel %1%2 is not part of the stations metadata.")
+				_ui.labelIssueText->setText(tr("The configured bindings channel %1%2 is not part of the station's metadata.")
 				                            .arg(stationData->detecLocid.c_str(), stationData->detecStream.c_str()));
 				break;
 
 			case Settings::NoVerticalChannelMetaData:
 				icon = Gui::icon("database", QColor(Qt::darkRed));
-				_ui.labelIssueText->setText(tr("The configured bindings channel group %1%2 has no defined vertical channel in the stations metadata.")
+				_ui.labelIssueText->setText(tr("The configured bindings channel group %1%2 has no defined vertical channel in the station's metadata.")
 				                            .arg(stationData->detecLocid.c_str(), stationData->detecStream.c_str()));
 				break;
 

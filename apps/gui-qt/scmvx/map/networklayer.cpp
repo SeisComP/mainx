@@ -789,12 +789,33 @@ void NetworkLayer::setActiveQCParameter(const std::string &param) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void NetworkLayer::setStationsVisible(QSet<const DataModel::Station*> *set) {
+	// Match by "networkCode.stationCode" rather than by pointer: a station's
+	// symbol may use a different (e.g. closed) epoch than the one stored in
+	// the station configuration the search selection refers to.
+	std::set<std::string> ids;
+	if ( set ) {
+		foreach ( const DataModel::Station *sta, *set ) {
+			ids.insert(sta->network()->code() + "." + sta->code());
+		}
+	}
+
 	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
-		updateSymbolVisibility(s);
-		if ( set && !set->contains(s->model()) ) {
+		if ( !set ) {
+			// No selection: restore the regular filter-based visibility.
+			updateSymbolVisibility(s);
+		}
+		else if ( ids.find(s->model()->network()->code() + "." +
+		                   s->model()->code()) != ids.end() ) {
+			// A searched station is always shown, even when it would be
+			// hidden by the closed/unbound/network filters.
+			s->setDefaultVisibility();
+		}
+		else {
 			s->setVisible(false);
 		}
 	}
+
+	emit updateRequested(Position);
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -900,6 +921,36 @@ int stationListCount(const QString &list) {
 QString NetworkLayer::closedStationList() const {
 	return buildStationList(_stationSymbols,
 	                        [](const NetworkLayerSymbol *s) { return s->isClosed(); });
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+std::set<std::string> NetworkLayer::closedStationCodes() const {
+	std::set<std::string> result;
+	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
+		if ( s->isClosed() ) {
+			result.insert(s->model()->network()->code() + "." + s->model()->code());
+		}
+	}
+	return result;
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+std::set<std::string> NetworkLayer::visibleStationCodes() const {
+	std::set<std::string> result;
+	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
+		if ( s->isVisible() ) {
+			result.insert(s->model()->network()->code() + "." + s->model()->code());
+		}
+	}
+	return result;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

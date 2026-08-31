@@ -33,7 +33,7 @@
      <item>
       <widget class="QLabel" name="label" >
        <property name="text" >
-        <string>Search:</string>
+        <string>Search all:</string>
        </property>
       </widget>
      </item>
@@ -55,6 +55,35 @@
     <widget class="Line" name="line" >
      <property name="orientation" >
       <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="labelSelectStreams" >
+     <property name="text" >
+      <string>Select station(s)/stream(s) from list:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="checkIncludeClosed" >
+     <property name="toolTip" >
+      <string>
+       Also list and search stations which currently do not have open streams
+      </string>
+     </property>
+     <property name="text" >
+      <string>Include closed stations</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="checkOnlyVisible" >
+     <property name="toolTip" >
+      <string>Only list and search stations currently visible on map</string>
+     </property>
+     <property name="text" >
+      <string>Confine to visible stations</string>
      </property>
     </widget>
    </item>

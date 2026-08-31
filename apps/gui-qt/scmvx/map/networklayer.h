@@ -242,6 +242,14 @@ class NetworkLayer : public Gui::Map::Layer {
 		//! visible stations in each export category.
 		QString closedStationList() const;
 		QString unboundStationList() const;
+
+		//! "networkCode.stationCode" of every station rendered as closed,
+		//! regardless of its current visibility.
+		std::set<std::string> closedStationCodes() const;
+
+		//! "networkCode.stationCode" of every station currently visible on
+		//! the map (respecting all active filters).
+		std::set<std::string> visibleStationCodes() const;
 		QString mismatchStationList() const;
 		QString noDetecStreamStationList() const;
 		QString disabledStationList() const;

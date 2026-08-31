@@ -25,6 +25,9 @@
 #include "./settings.h"
 #include "ui_searchwidget.h"
 
+#include <set>
+#include <string>
+
 
 namespace Seiscomp {
 namespace MapViewX {
@@ -34,7 +37,9 @@ class SearchWidget : public QWidget {
 	Q_OBJECT
 
 	public:
-		explicit SearchWidget(QWidget* parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
+		explicit SearchWidget(const std::set<std::string> &closedCodes,
+		                      const std::set<std::string> &visibleCodes,
+		                      QWidget* parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
 
 	public:
 		QSet<const DataModel::Station*> visibleData() const;

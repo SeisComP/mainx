@@ -1264,7 +1264,9 @@ void MainWindow::applyQCMode(QAction *action) {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void MainWindow::searchStation() {
 	if ( !_currentSearch ) {
-		_currentSearch = new SearchWidget(this);
+		_currentSearch = new SearchWidget(_networkLayer->closedStationCodes(),
+		                                  _networkLayer->visibleStationCodes(),
+		                                  this);
 		connect(_currentSearch, SIGNAL(destroyed(QObject*)),
 		        this, SLOT(objectDestroyed(QObject*)));
 		connect(_currentSearch, SIGNAL(filterView()),
@@ -1281,19 +1283,28 @@ void MainWindow::searchStation() {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void MainWindow::filterStations() {
-	if ( _currentSearch ) {
-		auto result = _currentSearch->visibleData();
-		_networkLayer->setStationsVisible(&result);
-
-		if ( !result.isEmpty() ) {
-			_mapWidget->canvas().setMapCenter(
-				QPointF(
-					(*result.begin())->longitude(),
-					(*result.begin())->latitude()
-				)
-			);
-		}
+	if ( !_currentSearch ) {
+		return;
 	}
+
+	auto result = _currentSearch->visibleData();
+
+	if ( !result.isEmpty() ) {
+		// Center on the geographic center of the selected stations (on the
+		// station itself when only one is selected).
+		double sumLon = 0.0;
+		double sumLat = 0.0;
+		for ( const DataModel::Station *s : result ) {
+			sumLon += s->longitude();
+			sumLat += s->latitude();
+		}
+
+		_mapWidget->canvas().setMapCenter(
+			QPointF(sumLon / result.size(), sumLat / result.size())
+		);
+	}
+
+	_networkLayer->setStationsVisible(&result);
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

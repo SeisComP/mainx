@@ -70,6 +70,15 @@ class NetworkLayerSymbol : public StationSymbol {
 
 		void setDefaultVisibility();
 
+		//! Sets the symbol visibility and keeps the annotation in sync.
+		//! Intentionally hides the non-virtual base class method: all
+		//! symbols of this layer are handled as NetworkLayerSymbol.
+		void setVisible(bool visible);
+
+		//! Synchronizes the annotation visibility with the current symbol
+		//! visibility and clipping state.
+		void updateAnnotationVisibility();
+
 		bool setSelected(bool);
 		bool isSelected() const { return _selected; }
 

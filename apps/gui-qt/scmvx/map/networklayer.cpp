@@ -189,6 +189,27 @@ void NetworkLayerSymbol::setDefaultVisibility() {
 
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void NetworkLayerSymbol::setVisible(bool visible) {
+	StationSymbol::setVisible(visible);
+	updateAnnotationVisibility();
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void NetworkLayerSymbol::updateAnnotationVisibility() {
+	if ( _annotation ) {
+		_annotation->visible = !isClipped() && isVisible();
+	}
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool NetworkLayerSymbol::setSelected(bool f) {
 	if ( _selected == f ) return false;
 	_selected = f;
@@ -252,9 +273,7 @@ void NetworkLayerSymbol::updateColor() {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void NetworkLayerSymbol::calculateMapPosition(const Seiscomp::Gui::Map::Canvas *canvas) {
 	StationSymbol::calculateMapPosition(canvas);
-	if ( _annotation ) {
-		_annotation->visible = !isClipped() && isVisible();
-	}
+	updateAnnotationVisibility();
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

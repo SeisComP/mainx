@@ -97,6 +97,45 @@ bool isClosedStation(DataModel::Station *sta, const Core::Time &refTime) {
 }
 
 
+/**
+ * @brief Checks whether a station epoch is active at the reference time.
+ *
+ * Epochs without end time are open and thus active once they started.
+ */
+bool isActiveStation(DataModel::Station *sta, const Core::Time &refTime) {
+	if ( refTime < sta->start() ) {
+		return false;
+	}
+
+	try {
+		return refTime < sta->end();
+	}
+	catch ( ... ) {
+		// Open-ended station epoch
+		return true;
+	}
+}
+
+
+/**
+ * @brief Returns the epoch which should represent a station on the map.
+ *
+ * An epoch active at the reference time always wins over a closed one.
+ * Otherwise the most recent epoch is taken so that a station which stopped
+ * operating is still rendered with its latest metadata.
+ */
+DataModel::Station *preferredEpoch(DataModel::Station *lhs,
+                                   DataModel::Station *rhs,
+                                   const Core::Time &refTime) {
+	bool lhsActive = isActiveStation(lhs, refTime);
+	if ( lhsActive != isActiveStation(rhs, refTime) ) {
+		return lhsActive ? lhs : rhs;
+	}
+
+	return lhs->start() < rhs->start() ? rhs : lhs;
+}
+
+
 void drawInfoSymbol(QPainter &painter, const QPoint &lowerLeft, const QPixmap &pixmap) {
 	static QColor errorBorder(QColor(255,128,0));
 	QSize layoutSize = pixmap.size() / pixmap.devicePixelRatio();
@@ -689,6 +728,12 @@ void NetworkLayer::setInventory(DataModel::Inventory *inv,
 		refTime = Core::Time::UTC();
 	}
 
+	// A station is rendered with one symbol but may come with several epochs,
+	// either below the same network epoch or spread over multiple ones. Pick
+	// the representative epoch first, the inventory does not guarantee any
+	// order.
+	std::map<std::string, DataModel::Station*> stations;
+
 	for ( n = 0; n < inv->networkCount(); ++n ) {
 		DataModel::Network *net = inv->network(n);
 
@@ -699,52 +744,50 @@ void NetworkLayer::setInventory(DataModel::Inventory *inv,
 				continue;
 			}
 
-			// A station whose epoch is closed is normally not shown. It is
-			// still shown when its last stream epoch is closed - regardless
-			// of configuration - but marked as closed (rendered with a cross).
-			bool closed = isClosedStation(sta, refTime);
-
-			try {
-				if ( (sta->end() <= refTime) && !closed ) {
-					continue;
-				}
+			auto [it, inserted] = stations.emplace(net->code() + "." + sta->code(), sta);
+			if ( !inserted ) {
+				it->second = preferredEpoch(it->second, sta, refTime);
 			}
-			catch ( ... ) {}
+		}
+	}
 
-			double lat, lon;
-			try {
-				lat = sta->latitude();
-				lon = sta->longitude();
-			}
-			catch ( ... ) {
-				continue;
-			}
+	for ( const auto &[staID, sta] : stations ) {
+		// A station whose epoch is closed is normally not shown. It is
+		// still shown when its last stream epoch is closed - regardless
+		// of configuration - but marked as closed (rendered with a cross).
+		bool closed = isClosedStation(sta, refTime);
 
-			auto staID = net->code() + "." + sta->code();
-			if ( _stationSymbolLookup.find(staID) != _stationSymbolLookup.end() ) {
-				// Symbol with ID already registered
-				continue;
-			}
+		if ( !isActiveStation(sta, refTime) && !closed ) {
+			continue;
+		}
 
-			// Got a valid station epoch
-			NetworkLayerSymbol *symbol = new NetworkLayerSymbol(this, sta, annotations->add(QString()));
-			symbol->setPenWidth(defaultFrameWidth);
-			symbol->setLocation(lat, lon);
-			symbol->setClosed(closed);
-			if ( closed && !closedStationsVisible() ) {
-				symbol->setVisible(false);
-			}
-			updateColor(symbol);
+		double lat, lon;
+		try {
+			lat = sta->latitude();
+			lon = sta->longitude();
+		}
+		catch ( ... ) {
+			continue;
+		}
 
-			_stationSymbolLookup[staID] = symbol;
-			_stationSymbols.append(symbol);
+		// Got a valid station epoch
+		NetworkLayerSymbol *symbol = new NetworkLayerSymbol(this, sta, annotations->add(QString()));
+		symbol->setPenWidth(defaultFrameWidth);
+		symbol->setLocation(lat, lon);
+		symbol->setClosed(closed);
+		if ( closed && !closedStationsVisible() ) {
+			symbol->setVisible(false);
+		}
+		updateColor(symbol);
 
-			// Register symbol with config
-			auto it = global.stationConfig.find(symbol->model());
-			if ( it != global.stationConfig.end() ) {
-				auto data = it->second.get();
-				data->viewData = symbol;
-			}
+		_stationSymbolLookup[staID] = symbol;
+		_stationSymbols.append(symbol);
+
+		// Register symbol with config
+		auto it = global.stationConfig.find(symbol->model());
+		if ( it != global.stationConfig.end() ) {
+			auto data = it->second.get();
+			data->viewData = symbol;
 		}
 	}
 

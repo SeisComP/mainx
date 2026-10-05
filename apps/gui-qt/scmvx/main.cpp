@@ -24,6 +24,8 @@
 #include <seiscomp/system/pluginregistry.h>
 #include <QMessageBox>
 
+#include <memory>
+
 #include "app.h"
 
 
@@ -173,15 +175,19 @@ bool Application::init() {
 		_gmScale = GroundMotionScaleFactory::Create(scale);
 		if ( !_gmScale ) {
 			SEISCOMP_ERROR("Invalid ground motion scale: %s", scale);
-			SEISCOMP_DEBUG(" adasdsd");
-			auto services = GroundMotionScaleFactory::Services();
-			SEISCOMP_DEBUG(" %p", static_cast<void*>(services));
-			/*
-			for ( auto &s : *services ) {
-				SEISCOMP_DEBUG(" %s", s);
+
+			std::unique_ptr<GroundMotionScaleFactory::ServiceNames> services(
+				GroundMotionScaleFactory::Services()
+			);
+			if ( services ) {
+				for ( const auto &s : *services ) {
+					SEISCOMP_DEBUG("  available: %s", s);
+				}
 			}
-			delete services;
-			*/
+			else {
+				SEISCOMP_DEBUG("  no ground motion scale is registered");
+			}
+
 			return false;
 		}
 	}
@@ -200,6 +206,27 @@ bool Application::init() {
 
 	size_t n, s;
 	Core::Time refTime = Core::Time::UTC();
+
+	if ( !global.offline ) {
+		_recordStreamThread = new Gui::RecordStreamThread(recordStreamURL());
+
+		if ( _recordStreamThread->connect() ) {
+			_recordStreamThread->setStartTime(Core::Time::UTC() - global.ringBuffer);
+		}
+		else {
+			SEISCOMP_ERROR("Failed to open record stream: %s",
+			               recordStreamURL());
+			QMessageBox::warning(
+				nullptr, tr("Waveform acquisition"),
+				tr("Failed to create data stream from:\n%1\n\n"
+				   "The application continues without ground motion data.")
+				.arg(recordStreamURL())
+			);
+
+			delete _recordStreamThread;
+			_recordStreamThread = nullptr;
+		}
+	}
 
 	for ( n = 0; n < inv->networkCount(); ++n ) {
 		DataModel::Network *net = inv->network(n);
@@ -307,16 +334,6 @@ bool Application::init() {
 
 					data->channel = cha;
 
-					if ( !_recordStreamThread && !global.offline ) {
-						_recordStreamThread = new Gui::RecordStreamThread(recordStreamURL());
-						if ( !_recordStreamThread->connect() ) {
-							QMessageBox::critical(nullptr, tr("Error"), tr("Failed to create data stream from:\n%1").arg(recordStreamURL().c_str()));
-							return false;
-						}
-
-						_recordStreamThread->setStartTime(Core::Time::UTC() - global.ringBuffer);
-					}
-
 					std::string cid = net->code() + "." + sta->code() + "." + loc->code() + "." + cha->code();
 
 					data->proc = new GroundMotionProcessor;
@@ -353,9 +370,17 @@ bool Application::init() {
 	}
 
 	if ( _recordStreamThread ) {
-		connect(_recordStreamThread, SIGNAL(receivedRecord(Seiscomp::Record*)),
-		        this, SLOT(handleRecord(Seiscomp::Record*)));
-		_recordStreamThread->start();
+		if ( _waveformProcessors.empty() ) {
+			SEISCOMP_DEBUG("No channel could be resolved from the bindings, "
+			               "waveform acquisition is disabled");
+			delete _recordStreamThread;
+			_recordStreamThread = nullptr;
+		}
+		else {
+			connect(_recordStreamThread, SIGNAL(receivedRecord(Seiscomp::Record*)),
+			        this, SLOT(handleRecord(Seiscomp::Record*)));
+			_recordStreamThread->start();
+		}
 	}
 
 	return true;

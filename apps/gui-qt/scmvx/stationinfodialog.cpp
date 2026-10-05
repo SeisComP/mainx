@@ -343,6 +343,10 @@ void StationInfoDialog::addPick(DataModel::Pick *pick) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void StationInfoDialog::processingDataUpdated(const Settings::StationData *stationData) {
+	if ( !stationData || !stationData->proc ) {
+		return;
+	}
+
 	RecordSequence *seq = stationData->proc->rawData();
 	if ( seq ) {
 		_trace[0]->setRecords(0, seq, false);

@@ -97,18 +97,18 @@ class MagImporter(client.Application):
 
         try:
             self.inputFile = self.commandline().optionString("input")
-        except RuntimeError:
+        except Exception:
             logging.error("Parameter 'input' not given")
             return False
 
         try:
             self.assocAPI = self.commandline().optionString("associate-api")
-        except RuntimeError:
+        except Exception:
             pass
 
         try:
             self.magType = self.commandline().optionString("mag-type")
-        except RuntimeError:
+        except Exception:
             pass
 
         return True

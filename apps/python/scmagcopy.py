@@ -49,7 +49,7 @@ class MagnitudeCopy(client.Application):
 
         try:
             self.magType = self.commandline().optionString("mag-type")
-        except RuntimeError:
+        except Exception:
             pass
 
         return True
@@ -60,7 +60,7 @@ class MagnitudeCopy(client.Application):
 
         try:
             self.magType = self.configGetString("magType")
-        except RuntimeError:
+        except Exception:
             pass
 
         return True

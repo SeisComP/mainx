@@ -220,7 +220,7 @@ bool Application::init() {
 				nullptr, tr("Waveform acquisition"),
 				tr("Failed to create data stream from:\n%1\n\n"
 				   "The application continues without ground motion data.")
-				.arg(recordStreamURL())
+				.arg(recordStreamURL().data())
 			);
 
 			delete _recordStreamThread;

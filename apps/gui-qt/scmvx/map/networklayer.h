@@ -293,6 +293,10 @@ class NetworkLayer : public Gui::Map::Layer {
 
 		void updateStation(const std::string &staID);
 
+		//! Forces a recomputation of the render order, e.g. after a symbol
+		//! value has changed.
+		void invalidateDrawOrder() { _drawOrderDirty = true; }
+
 
 	// ----------------------------------------------------------------------
 	//  Signals
@@ -380,6 +384,14 @@ class NetworkLayer : public Gui::Map::Layer {
 		//! the "show closed" toggle is enabled.
 		bool closedStationsVisible() const { return _showClosed && (_colorMode == Network); }
 
+		//! Returns the symbols in render order (bottom first). In ground motion
+		//! and QC mode the most significant stations are rendered last so
+		//! that they are not hidden by neighbouring stations.
+		const QVector<NetworkLayerSymbol*> &drawOrder() const;
+
+		//! The sort key used to compute the render order.
+		double drawRank(const NetworkLayerSymbol *s) const;
+
 
 	// ----------------------------------------------------------------------
 	//  Private members
@@ -407,6 +419,10 @@ class NetworkLayer : public Gui::Map::Layer {
 		QMap<std::string, NetworkLayerGradient>  _qcGradients;
 
 		mutable NetworkLayerSymbol              *_isInsideSymbol;
+
+		//! Cached render order, see drawOrder()
+		mutable Symbols                          _drawOrder;
+		mutable bool                             _drawOrderDirty{true};
 
 		//! Screen rectangle of the station-filter alert box (empty when it is
 		//! not shown) and whether the cursor is currently over it.

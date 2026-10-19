@@ -51,6 +51,12 @@ class CurrentEventLayer : public Gui::Map::Layer {
 		 */
 		void setEvent(DataModel::Event *evt);
 
+		/**
+		 * @brief Requests a repaint if the relative origin time text has
+		 *        changed. Should be called periodically.
+		 */
+		void tick();
+
 
 	// ----------------------------------------------------------------------
 	//  Layer interface
@@ -74,19 +80,24 @@ class CurrentEventLayer : public Gui::Map::Layer {
 	//  Private members
 	// ----------------------------------------------------------------------
 	private:
-		bool            _isValid;
+		bool            _isValid{false};
 		std::string     _eventID;
-		QSize           _size;
 		QSize           _magSize;
-		int             _headerHeight;
+		int             _minWidth;
+		QRect           _boxRect;
 
 		QFont           _magFont;
+		QFont           _magTypeFont;
 		QFont           _boldFont;
 		QFont           _normalFont;
 
 		OPT(double)     _magnitude;
+		QString         _magnitudeType;
 		QString         _region;
 		OPT(Core::Time) _originTime;
+		OPT(double)     _depth;
+		QString         _status;
+		QString         _lastAgo;
 };
 
 

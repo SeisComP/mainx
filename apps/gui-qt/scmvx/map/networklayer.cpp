@@ -272,6 +272,9 @@ void NetworkLayerSymbol::setColor(QColor c) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void NetworkLayerSymbol::setColorFromValue(double value) {
+	if ( _layer && (value != _value) ) {
+		_layer->invalidateDrawOrder();
+	}
 	setValue(value);
 	updateColor();
 }
@@ -657,6 +660,8 @@ void NetworkLayer::disposeSymbols() {
 
 	_stationSymbols.clear();
 	_stationSymbolLookup.clear();
+	_drawOrder.clear();
+	_drawOrderDirty = true;
 	_currentSymbol = nullptr;
 	_currentClickSymbol = nullptr;
 	_selectedSymbol = nullptr;
@@ -794,6 +799,7 @@ void NetworkLayer::setInventory(DataModel::Inventory *inv,
 	updateAnnotations();
 
 	std::sort(_stationSymbols.begin(), _stationSymbols.end(), topToBottom);
+	_drawOrderDirty = true;
 	_legend->updateFrom(this);
 
 	emit updateRequested();
@@ -1330,10 +1336,11 @@ bool NetworkLayer::isInside(const QMouseEvent *event, const QPointF &geoPos) {
 
 	int x = event->pos().x();
 	int y = event->pos().y();
-	auto it = _stationSymbols.end();
+	const auto &symbols = drawOrder();
+	auto it = symbols.end();
 	_isInsideSymbol = nullptr;
 
-	while ( it != _stationSymbols.begin() ) {
+	while ( it != symbols.begin() ) {
 		--it;
 		if ( (*it)->isVisible() && (*it)->isInside(x, y) ) {
 			_isInsideSymbol = *it;
@@ -1364,7 +1371,9 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 
 	bool showIssues = _showIssues && (_colorMode == Network);
 
-	foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
+	const auto &symbols = drawOrder();
+
+	foreach ( NetworkLayerSymbol *s, symbols ) {
 		if ( s->isClipped() || !s->isVisible() ) {
 			continue;
 		}
@@ -1373,7 +1382,7 @@ void NetworkLayer::draw(const Gui::Map::Canvas *canvas, QPainter &p) {
 	}
 
 	for ( int i = Gui::Map::Symbol::NONE; i <= Gui::Map::Symbol::HIGH; ++i ) {
-		foreach ( NetworkLayerSymbol *s, _stationSymbols ) {
+		foreach ( NetworkLayerSymbol *s, symbols ) {
 			if ( s->isClipped() || !s->isVisible() || (s->priority() != i) ) {
 				continue;
 			}
@@ -1619,8 +1628,9 @@ void NetworkLayer::selectStation(NetworkLayerSymbol *symbol) {
 QVector<NetworkLayerSymbol*> NetworkLayer::symbolsUnder(int x, int y) const {
 	QVector<NetworkLayerSymbol*> result;
 
-	auto it = _stationSymbols.end();
-	while ( it != _stationSymbols.begin() ) {
+	const auto &symbols = drawOrder();
+	auto it = symbols.end();
+	while ( it != symbols.begin() ) {
 		--it;
 		NetworkLayerSymbol *s = *it;
 		if ( s->isVisible() && s->isInside(x, y) ) {
@@ -1728,6 +1738,80 @@ void NetworkLayer::updateColor(NetworkLayerSymbol *symbol) {
 	else {
 		symbol->setColor(SCScheme.colors.stations.disabled);
 	}
+
+	_drawOrderDirty = true;
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+double NetworkLayer::drawRank(const NetworkLayerSymbol *s) const {
+	if ( (_colorMode != GroundMotion) && (_colorMode != QC) ) {
+		return 0;
+	}
+
+	if ( s->data() && !s->data()->enabled ) {
+		return -2;
+	}
+
+	if ( s->value() < 0 || !currentGradient || currentGradient->isEmpty() ) {
+		return -1;
+	}
+
+	if ( _colorMode == GroundMotion ) {
+		// Higher amplitudes on top
+		return s->value();
+	}
+
+	// QC: rank by the distance of the value's gradient bin to the bin
+	// flagged as OK. That covers parameters where low values are good
+	// (delay, latency) as well as those where high values are good
+	// (availability, timing quality).
+	int okIndex = 0;
+	int valueIndex = 0;
+	int idx = 0;
+	for ( auto it = currentGradient->begin(); it != currentGradient->end(); ++it, ++idx ) {
+		if ( it.value().first == SCScheme.colors.qc.qcOk ) {
+			okIndex = idx;
+		}
+		if ( it.key() <= s->value() ) {
+			valueIndex = idx;
+		}
+	}
+
+	return std::abs(valueIndex - okIndex);
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+const QVector<NetworkLayerSymbol*> &NetworkLayer::drawOrder() const {
+	if ( _drawOrderDirty ) {
+		// _stationSymbols is sorted north to south. A stable sort keeps
+		// that order among stations of equal rank.
+		QVector<QPair<double, NetworkLayerSymbol*>> ranked;
+		ranked.reserve(_stationSymbols.size());
+		for ( auto *s : _stationSymbols ) {
+			ranked.append({drawRank(s), s});
+		}
+
+		std::stable_sort(ranked.begin(), ranked.end(),
+		                 [](const auto &a, const auto &b) { return a.first < b.first; });
+
+		_drawOrder.clear();
+		_drawOrder.reserve(ranked.size());
+		for ( const auto &item : ranked ) {
+			_drawOrder.append(item.second);
+		}
+
+		_drawOrderDirty = false;
+	}
+
+	return _drawOrder;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

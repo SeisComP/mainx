@@ -567,6 +567,7 @@ void MainWindow::timeout() {
 
 	_networkLayer->tick();
 	_eventLayer->tick();
+	_currentEventLayer->tick();
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

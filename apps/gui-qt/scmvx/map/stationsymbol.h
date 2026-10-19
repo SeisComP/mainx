@@ -61,7 +61,7 @@ class StationSymbol : public Gui::Map::Symbol {
 		void setWidth(int size);
 		int width() const;
 
-		static void generateShape(QPolygon &poly, int posX, int posY, int radius);
+		static void generateShape(QPolygonF &poly, qreal posX, qreal posY, qreal radius);
 
 
 	// ----------------------------------------------------------------------
@@ -83,8 +83,7 @@ class StationSymbol : public Gui::Map::Symbol {
 		int           _width{0};
 		int           _frameSize{0};
 		QColor        _frameColor;
-		QPolygon     *_stationPolygon{nullptr};
-		QPolygon     *_framePolygon{nullptr};
+		QPolygonF    *_stationPolygon{nullptr};
 
 		QColor        _fillColor{Qt::black};
 		QColor        _penColor{Qt::black};

@@ -24,6 +24,8 @@
 #include <seiscomp/datamodel/origin.h>
 #include <seiscomp/datamodel/magnitude.h>
 #include <seiscomp/datamodel/utils.h>
+#include <seiscomp/gui/core/application.h>
+#include <seiscomp/gui/core/compat.h>
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -96,6 +98,9 @@ CurrentEventLayer::CurrentEventLayer(QObject* parent)
 
 	int mag_em = QFontMetrics(_magFont).height()*3/4;
 
+	_magTypeFont = qApp->font();
+	_magTypeFont.setBold(true);
+
 	_boldFont = qApp->font();
 	_boldFont.setPointSize(_boldFont.pointSize()*3/2);
 	_boldFont.setBold(true);
@@ -105,11 +110,8 @@ CurrentEventLayer::CurrentEventLayer(QObject* parent)
 	_normalFont = qApp->font();
 	_normalFont.setPointSize(_normalFont.pointSize()*3/2);
 
-	int normal_em = QFontMetrics(_normalFont).height()*3/4;
-
 	_magSize = QSize(2*mag_em, 2*mag_em);
-	_headerHeight = normal_em * 2;
-	_size = QSize(qMax(_magSize.width() + 10*bold_em, 300), _magSize.height());
+	_minWidth = qMax(_magSize.width() + 10*bold_em, 300);
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -130,9 +132,11 @@ void CurrentEventLayer::setEvent(Event *evt) {
 	auto *mag = Magnitude::Find(evt->preferredMagnitudeID());
 	if ( mag ) {
 		_magnitude = mag->magnitude().value();
+		_magnitudeType = mag->type().c_str();
 	}
 	else {
 		_magnitude = Core::None;
+		_magnitudeType.clear();
 	}
 
 	if ( !mag && !evt->preferredMagnitudeID().empty() ) {
@@ -150,7 +154,40 @@ void CurrentEventLayer::setEvent(Event *evt) {
 	_originTime = org->time().value();
 	_region = eventRegion(evt).c_str();
 
+	try {
+		_depth = org->depth().value();
+	}
+	catch ( ... ) {
+		_depth = Core::None;
+	}
+
+	_status.clear();
+	try {
+		_status = org->evaluationStatus().toString();
+	}
+	catch ( ... ) {
+		try {
+			_status = org->evaluationMode().toString();
+		}
+		catch ( ... ) {}
+	}
+
 	emit updateRequested();
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void CurrentEventLayer::tick() {
+	if ( !_isValid || !_originTime || !isVisible() ) {
+		return;
+	}
+
+	if ( timeAgoToString(Core::Time::UTC() - *_originTime) != _lastAgo ) {
+		emit updateRequested();
+	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -160,57 +197,148 @@ void CurrentEventLayer::setEvent(Event *evt) {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void CurrentEventLayer::draw(const Map::Canvas *canvas, QPainter &p) {
 	if ( !_isValid ) {
+		_boxRect = QRect();
 		return;
 	}
 
 	p.save();
 
-	QFontMetrics fm = p.fontMetrics();
-	int em = fm.height();
-	int em2 = em/2;
+	const QColor textColor(0x33,0x33,0x33);
+	const QColor secondaryTextColor(0x66,0x66,0x66);
+	const int margin = 9;
 
-	QRect headerRect(9,9,_size.width(),_headerHeight);
-	QRect rect(9,9+_headerHeight,_size.width(),_size.height());
-	QRect magRect(9,9+_headerHeight,_magSize.width(),_magSize.height());
+	QFontMetrics fmNormal(_normalFont);
+	QFontMetrics fmBold(_boldFont);
+	QFontMetrics fmSmall(qApp->font());
 
-	p.fillRect(headerRect, QColor(0xE5,0xE5,0xE5));
-	p.fillRect(rect,Qt::white);
-	p.fillRect(magRect,QColor(0x7A,0xD4,0xE2));
+	int em2 = fmSmall.height() / 2;
+	int headerHeight = fmNormal.height() * 3 / 2;
 
-	p.setPen(QColor(0x21,0x35,0x51));
+	// Text column right of the magnitude tile
+	int textX = margin + _magSize.width() + em2;
+	int textWidth = _minWidth - _magSize.width() - 2*em2;
+
+	QString details;
+	if ( _depth ) {
+		details = tr("Depth %1 km").arg(*_depth, 0, 'f', 0);
+	}
+	if ( !_status.isEmpty() ) {
+		if ( !details.isEmpty() ) {
+			details += QString::fromUtf8(" · ");
+		}
+		details += _status;
+	}
+
+	_lastAgo = _originTime ? timeAgoToString(Core::Time::UTC() - *_originTime) : QString();
+
+	QRect regionRect = fmBold.boundingRect(
+		QRect(0, 0, textWidth, fmBold.height() * 2),
+		Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, _region
+	);
+
+	int textHeight = em2 + regionRect.height() + em2/2;
+	if ( !details.isEmpty() ) {
+		textHeight += fmSmall.height() + em2/2;
+	}
+	textHeight += fmNormal.height() + em2;
+
+	int bodyHeight = qMax(_magSize.height(), textHeight);
+
+	QRect headerRect(margin, margin, _minWidth, headerHeight);
+	QRect bodyRect(margin, margin + headerHeight, _minWidth, bodyHeight);
+	QRect magRect(margin, margin + headerHeight, _magSize.width(), bodyHeight);
+
+	_boxRect = headerRect.united(bodyRect);
+
+	p.setRenderHint(QPainter::Antialiasing, false);
+	p.fillRect(headerRect, QColor(0xE5,0xE5,0xE5,235));
+	p.fillRect(bodyRect, QColor(255,255,255,235));
+
+	// The tile uses the same depth color as the event symbols on the map
+	QColor magColor(0x7A,0xD4,0xE2);
+	if ( _depth ) {
+		magColor = SCScheme.colors.originSymbol.depth.gradient.colorAt(
+			*_depth, SCScheme.colors.originSymbol.depth.discrete
+		);
+		magColor.setAlpha(255);
+	}
+	p.fillRect(magRect, magColor);
+
+	p.setPen(QColor(0,0,0,48));
+	p.setBrush(Qt::NoBrush);
+	p.drawRect(_boxRect.adjusted(0, 0, -1, -1));
+
+	p.setRenderHint(QPainter::Antialiasing, true);
+
+	// Pick a magnitude text color with enough contrast to the tile
+	double luminance = 0.299*magColor.redF() + 0.587*magColor.greenF() + 0.114*magColor.blueF();
+	QColor magTextColor = luminance < 0.55 ? QColor(Qt::white) : QColor(0x21,0x35,0x51);
+
+	QRect magValueRect = magRect;
+	if ( !_magnitudeType.isEmpty() ) {
+		magValueRect.setBottom(magRect.bottom() - fmSmall.height());
+	}
+
+	p.setPen(magTextColor);
 	p.setFont(_magFont);
+	p.drawText(magValueRect, Qt::AlignCenter,
+	           _magnitude ? QString::number(*_magnitude, 'f', 1) : QString("-.-"));
 
-	if ( _magnitude ) {
-		p.drawText(magRect, Qt::AlignCenter, QString::number(*_magnitude, 'f', 1));
+	if ( !_magnitudeType.isEmpty() ) {
+		p.setFont(_magTypeFont);
+		p.drawText(QRect(magRect.left(), magRect.bottom() - fmSmall.height() * 3 / 2,
+		                 magRect.width(), fmSmall.height()),
+		           Qt::AlignCenter, _magnitudeType);
 	}
-	else {
-		p.drawText(magRect, Qt::AlignCenter, "-.-");
-	}
 
-	int agoHeight = QFontMetrics(_normalFont).height();
+	int y = bodyRect.top() + em2;
 
-	p.setPen(QColor(0x33,0x33,0x33));
-
+	p.setPen(textColor);
 	if ( !_region.isEmpty() ) {
 		p.setFont(_boldFont);
-		QRect regionRect(9 + _magSize.width(), 9 + _headerHeight, _size.width() - _magSize.width(), _size.height() - agoHeight - em2);
-		regionRect.adjust(em2, em2, -em2, -em2);
-		p.drawText(regionRect, Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, _region);
+		p.drawText(QRect(textX, y, textWidth, regionRect.height()),
+		           Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, _region);
+	}
+	y += regionRect.height() + em2/2;
+
+	if ( !details.isEmpty() ) {
+		p.setFont(qApp->font());
+		p.setPen(secondaryTextColor);
+		p.drawText(QRect(textX, y, textWidth, fmSmall.height()),
+		           Qt::AlignLeft | Qt::AlignVCenter, details);
+		y += fmSmall.height() + em2/2;
 	}
 
-	QRect agoRect(9 + _magSize.width(), 9 + _headerHeight + _size.height() - agoHeight-em2,_size.width() - _magSize.width(),agoHeight);
-	agoRect.adjust(em2,0,-em2,0);
+	// Pin the relative time to the bottom of the box
 	p.setFont(_normalFont);
-	if ( _originTime ) {
-		p.drawText(agoRect, Qt::AlignLeft | Qt::AlignTop, timeAgoToString(Core::Time::UTC() - *_originTime));
-	}
+	p.setPen(textColor);
+	p.drawText(QRect(textX, bodyRect.bottom() - em2 - fmNormal.height() + 1,
+	                 textWidth, fmNormal.height()),
+	           Qt::AlignLeft | Qt::AlignVCenter, _lastAgo);
 
-	headerRect.adjust(em2,0,-em2,0);
-	p.drawText(headerRect, Qt::AlignLeft | Qt::AlignVCenter, tr("Latest event"));
+	QRect headerTextRect = headerRect.adjusted(em2, 0, -em2, 0);
+	p.drawText(headerTextRect, Qt::AlignLeft | Qt::AlignVCenter, tr("Latest event"));
+
+	if ( _originTime ) {
+		// Drop the date if the header is too narrow to show it
+		int titleWidth = QT_FM_WIDTH(fmNormal, tr("Latest event"));
+		QString otime = QString("%1 UTC").arg(_originTime->toString("%F %T").c_str());
+		if ( titleWidth + em2 + QT_FM_WIDTH(fmSmall, otime) > headerTextRect.width() ) {
+			otime = QString("%1 UTC").arg(_originTime->toString("%T").c_str());
+		}
+
+		p.setFont(qApp->font());
+		p.setPen(secondaryTextColor);
+		p.drawText(headerTextRect, Qt::AlignRight | Qt::AlignVCenter, otime);
+	}
 
 	p.restore();
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
 
 
 
@@ -228,8 +356,7 @@ bool CurrentEventLayer::isInside(const QMouseEvent *event, const QPointF &) {
 		return false;
 	}
 
-	QRect box(9, 9, _size.width(), _headerHeight + _size.height());
-	return box.contains(event->pos());
+	return _boxRect.contains(event->pos());
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
